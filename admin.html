@@ -41,9 +41,6 @@
   .logo{display:flex;align-items:center;gap:10px;font-family:'Fraunces',serif;font-weight:600;font-size:19px;}
   .logo-blob{width:26px;height:26px;background:linear-gradient(135deg,var(--emerald-deep),var(--mint));flex-shrink:0;animation:blobMorph 8s ease-in-out infinite;}
   .badge-admin{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:var(--coral);color:#fff;padding:4px 10px;border-radius:99px;margin-left:4px;}
-  .back-link{font-size:13.5px;padding:9px 18px;border-radius:99px;border:1.5px solid var(--ink);text-decoration:none;transition:all .2s ease;}
-  .back-link:hover{background:var(--ink);color:var(--bg);}
-
   /* ---------- HEADER BANNER ---------- */
   .banner{position:relative;padding:56px 0;overflow:hidden;color:#fff;}
   .banner-bg{position:absolute;inset:0;background-image:url('https://images.unsplash.com/photo-1632789124528-07b43ba96460?fm=jpg&q=75&w=1800&auto=format&fit=crop');background-size:cover;background-position:center;}
@@ -128,7 +125,6 @@
 <nav>
   <div class="wrap">
     <div class="logo"><span class="logo-blob"></span>Полог<span class="badge-admin">Admin</span></div>
-    <a class="back-link" href="/user">← К форме сообщений</a>
   </div>
 </nav>
 
@@ -183,6 +179,7 @@ const sevLabel = { low: 'Низкая', med: 'Средняя', high: 'Высок
 
 let allReports = [];
 let currentFilter = 'all';
+const reportsStorage = createReportsStorage();
 
 const hotspotList = document.getElementById('hotspotList');
 const feedList = document.getElementById('feedList');
@@ -203,16 +200,50 @@ function escapeHtml(str){
   return div.innerHTML;
 }
 
+function createReportsStorage(){
+  if(window.storage){
+    return {
+      list: prefix => window.storage.list(prefix, true),
+      get: key => window.storage.get(key, true),
+      set: (key, value) => window.storage.set(key, value, true),
+      delete: key => window.storage.delete(key, true)
+    };
+  }
+
+  return {
+    list(prefix){
+      const keys = [];
+      for(let i = 0; i < localStorage.length; i += 1){
+        const key = localStorage.key(i);
+        if(key && key.startsWith(prefix)) keys.push(key);
+      }
+      return Promise.resolve({ keys });
+    },
+    get(key){
+      const value = localStorage.getItem(key);
+      return Promise.resolve(value === null ? null : { value });
+    },
+    set(key, value){
+      localStorage.setItem(key, value);
+      return Promise.resolve({ key, value });
+    },
+    delete(key){
+      localStorage.removeItem(key);
+      return Promise.resolve(true);
+    }
+  };
+}
+
 async function loadReports(){
   hotspotList.innerHTML = '<div class="empty-state">Загрузка…</div>';
   feedList.innerHTML = '<div class="empty-state">Загрузка…</div>';
   try{
-    const listResult = await window.storage.list('reports:', true);
+    const listResult = await reportsStorage.list('reports:');
     const keys = (listResult && listResult.keys) ? listResult.keys : [];
     const reports = [];
     for(const key of keys){
       try{
-        const res = await window.storage.get(key, true);
+        const res = await reportsStorage.get(key);
         if(res && res.value){
           const parsed = JSON.parse(res.value);
           parsed._key = key;
@@ -309,13 +340,13 @@ async function handleAction(action, key){
   if(!report) return;
   try{
     if(action === 'delete'){
-      await window.storage.delete(key, true);
+      await reportsStorage.delete(key);
     } else if(action === 'resolve'){
       report.status = 'resolved';
-      await window.storage.set(key, JSON.stringify({ loc: report.loc, desc: report.desc, sev: report.sev, ts: report.ts, status: 'resolved' }), true);
+      await reportsStorage.set(key, JSON.stringify({ loc: report.loc, desc: report.desc, sev: report.sev, ts: report.ts, status: 'resolved' }));
     } else if(action === 'reopen'){
       report.status = 'new';
-      await window.storage.set(key, JSON.stringify({ loc: report.loc, desc: report.desc, sev: report.sev, ts: report.ts, status: 'new' }), true);
+      await reportsStorage.set(key, JSON.stringify({ loc: report.loc, desc: report.desc, sev: report.sev, ts: report.ts, status: 'new' }));
     }
     await loadReports();
   }catch(e){
@@ -338,10 +369,10 @@ document.getElementById('refreshBtn2').addEventListener('click', loadReports);
 document.getElementById('resetBtn').addEventListener('click', async () => {
   if(!confirm('Удалить все сигналы из общего списка? Это затронет данные всех посетителей.')) return;
   try{
-    const listResult = await window.storage.list('reports:', true);
+    const listResult = await reportsStorage.list('reports:');
     const keys = (listResult && listResult.keys) ? listResult.keys : [];
     for(const key of keys){
-      try{ await window.storage.delete(key, true); }catch(e){ /* skip */ }
+      try{ await reportsStorage.delete(key); }catch(e){ /* skip */ }
     }
     await loadReports();
   }catch(e){

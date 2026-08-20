@@ -268,6 +268,22 @@ const submitBtn = document.getElementById('submitBtn');
 const formMsg = document.getElementById('formMsg');
 const justSubmitted = document.getElementById('justSubmitted');
 const sessionReports = [];
+const reportsStorage = createReportsStorage();
+
+function createReportsStorage(){
+  if(window.storage){
+    return {
+      set: (key, value) => window.storage.set(key, value, true)
+    };
+  }
+
+  return {
+    set(key, value){
+      localStorage.setItem(key, value);
+      return Promise.resolve({ key, value });
+    }
+  };
+}
 
 submitBtn.addEventListener('click', async () => {
   const loc = locInput.value.trim();
@@ -288,7 +304,7 @@ submitBtn.addEventListener('click', async () => {
   const key = `reports:${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
 
   try{
-    const result = await window.storage.set(key, JSON.stringify(report), true);
+    const result = await reportsStorage.set(key, JSON.stringify(report));
     if(!result) throw new Error('empty result');
     formMsg.textContent = 'Спасибо. Сигнал добавлен в общий список.';
     sessionReports.unshift(report);
