@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Полог — панель администратора</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFF8ED;
+    --ink:#0B2A20;
+    --ink-soft:rgba(11,42,32,0.6);
+    --emerald-deep:#0F3D2E;
+    --emerald:#1B6B52;
+    --mint:#57C9A0;
+    --coral:#FF7F53;
+    --coral-deep:#E85D33;
+    --glass:rgba(255,248,237,0.8);
+    --line:rgba(11,42,32,0.1);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3{font-family:'Fraunces',serif;margin:0;letter-spacing:-0.01em;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:inherit;}
+  button{font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 32px;}
+  @media(max-width:640px){.wrap{padding:0 18px;}}
+  *:focus-visible{outline:2px solid var(--emerald);outline-offset:2px;border-radius:4px;}
+
+  @keyframes blobMorph{
+    0%,100%{border-radius:63% 37% 54% 46% / 55% 48% 52% 45%;}
+    33%{border-radius:42% 58% 68% 32% / 45% 62% 38% 55%;}
+    66%{border-radius:55% 45% 40% 60% / 60% 35% 65% 40%;}
+  }
+
+  nav{position:sticky;top:0;z-index:50;background:rgba(255,248,237,0.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:72px;}
+  .logo{display:flex;align-items:center;gap:10px;font-family:'Fraunces',serif;font-weight:600;font-size:19px;}
+  .logo-blob{width:26px;height:26px;background:linear-gradient(135deg,var(--emerald-deep),var(--mint));flex-shrink:0;animation:blobMorph 8s ease-in-out infinite;}
+  .badge-admin{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;background:var(--coral);color:#fff;padding:4px 10px;border-radius:99px;margin-left:4px;}
+  .back-link{font-size:13.5px;padding:9px 18px;border-radius:99px;border:1.5px solid var(--ink);text-decoration:none;transition:all .2s ease;}
+  .back-link:hover{background:var(--ink);color:var(--bg);}
+
+  /* ---------- HEADER BANNER ---------- */
+  .banner{position:relative;padding:56px 0;overflow:hidden;color:#fff;}
+  .banner-bg{position:absolute;inset:0;background-image:url('https://images.unsplash.com/photo-1632789124528-07b43ba96460?fm=jpg&q=75&w=1800&auto=format&fit=crop');background-size:cover;background-position:center;}
+  .banner-overlay{position:absolute;inset:0;background:linear-gradient(120deg, rgba(15,61,46,0.92), rgba(11,42,32,0.75) 60%, rgba(11,42,32,0.55));}
+  .banner-inner{position:relative;}
+  .banner h1{font-size:clamp(26px,3.4vw,38px);font-weight:500;max-width:24ch;}
+  .banner p{margin-top:12px;color:rgba(255,248,237,0.72);max-width:56ch;font-size:15.5px;}
+
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:32px;position:relative;}
+  @media(max-width:800px){.stat-row{grid-template-columns:repeat(2,1fr);}}
+  .stat-glass{background:rgba(255,248,237,0.12);backdrop-filter:blur(8px);border:1px solid rgba(255,248,237,0.2);border-radius:22px;padding:18px 20px;}
+  .stat-num{font-family:'Fraunces',serif;font-size:30px;}
+  .stat-lbl{font-size:12.5px;color:rgba(255,248,237,0.65);margin-top:4px;}
+
+  /* ---------- BODY ---------- */
+  .body-wrap{padding:56px 0 90px;}
+  .panels{display:grid;grid-template-columns:0.85fr 1.15fr;gap:28px;align-items:start;}
+  @media(max-width:960px){.panels{grid-template-columns:1fr;}}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:28px;padding:28px 26px;}
+  .card-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+  .card-head h2{font-size:20px;font-weight:500;}
+  .card-hint{font-size:13px;color:var(--ink-soft);margin-bottom:18px;}
+  .refresh-btn{background:none;border:1.5px solid var(--line);border-radius:99px;padding:7px 14px;font-size:12px;font-weight:600;color:var(--ink);transition:all .2s ease;}
+  .refresh-btn:hover{border-color:var(--emerald);color:var(--emerald);}
+
+  .algo-note{font-size:12px;color:var(--ink-soft);background:rgba(87,201,160,0.12);border-radius:16px;padding:12px 14px;margin:12px 0 18px;line-height:1.6;}
+  .algo-note b{color:var(--ink);}
+
+  .hotspot{display:flex;gap:14px;padding:14px 0;border-top:1px solid var(--line);align-items:flex-start;}
+  .hotspot:first-of-type{border-top:none;}
+  .rank{
+    width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,var(--mint),var(--emerald));color:#fff;font-weight:700;font-size:13px;
+    border-radius:63% 37% 54% 46% / 55% 48% 52% 45%;font-family:'Fraunces',serif;margin-top:1px;
+  }
+  .hotspot.crit .rank{background:linear-gradient(135deg,var(--coral),var(--coral-deep));}
+  .hotspot-body{flex:1;}
+  .hotspot-loc{font-weight:600;font-size:15px;}
+  .hotspot-meta{font-size:12px;color:var(--ink-soft);margin-top:3px;}
+  .score-badge{font-size:12px;font-weight:700;color:var(--emerald);white-space:nowrap;padding-top:5px;}
+  .hotspot.crit .score-badge{color:var(--coral-deep);}
+
+  /* ---------- FEED / TABLE ---------- */
+  .filter-tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+  .filter-tab{
+    padding:8px 16px;border-radius:99px;border:1.5px solid var(--line);font-size:13px;font-weight:600;
+    background:none;color:var(--ink-soft);transition:all .2s ease;
+  }
+  .filter-tab.active{background:var(--ink);border-color:var(--ink);color:var(--bg);}
+
+  .feed-item{border:1px solid var(--line);border-radius:20px;padding:16px 18px;margin-bottom:10px;transition:box-shadow .2s ease;}
+  .feed-item:hover{box-shadow:0 8px 24px rgba(15,61,46,0.08);}
+  .feed-item.resolved{opacity:0.55;}
+  .feed-top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;}
+  .feed-loc{font-weight:600;font-size:15px;}
+  .feed-tags{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .sev-tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:4px 10px;border-radius:99px;color:#fff;white-space:nowrap;}
+  .sev-tag.low{background:var(--mint);}
+  .sev-tag.med{background:var(--coral);}
+  .sev-tag.high{background:var(--coral-deep);}
+  .status-tag{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--line);color:var(--ink-soft);}
+  .feed-desc{margin-top:8px;font-size:14px;color:var(--ink-soft);}
+  .feed-bottom{margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+  .feed-time{font-size:11.5px;color:var(--ink-soft);}
+  .feed-actions{display:flex;gap:8px;}
+  .action-btn{font-size:12px;font-weight:600;padding:7px 13px;border-radius:99px;border:1.5px solid var(--line);background:none;color:var(--ink);transition:all .15s ease;}
+  .action-btn:hover{border-color:var(--emerald);color:var(--emerald);}
+  .action-btn.danger:hover{border-color:var(--coral-deep);color:var(--coral-deep);}
+
+  .empty-state{font-size:13.5px;color:var(--ink-soft);padding:24px 0;text-align:center;}
+
+  footer{padding:20px 0 60px;}
+  .footer-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;border-top:1px solid var(--line);padding-top:24px;font-size:13px;color:var(--ink-soft);}
+  .reset-btn{background:none;border:none;color:var(--coral-deep);text-decoration:underline;cursor:pointer;font-size:13px;font-weight:600;}
+
+  @media(prefers-reduced-motion:reduce){ *{animation:none !important;transition:none !important;} }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="logo"><span class="logo-blob"></span>Полог<span class="badge-admin">Admin</span></div>
+    <a class="back-link" href="reporter.html">← К форме сообщений</a>
+  </div>
+</nav>
+
+<header class="banner">
+  <div class="banner-bg"></div>
+  <div class="banner-overlay"></div>
+  <div class="wrap banner-inner">
+    <h1>Панель приоритизации сигналов</h1>
+    <p>Все сообщения от посетителей — в одном месте, автоматически ранжированные по тому, куда стоит выехать в первую очередь.</p>
+    <div class="stat-row">
+      <div class="stat-glass"><div class="stat-num" id="statTotal">—</div><div class="stat-lbl">всего сигналов</div></div>
+      <div class="stat-glass"><div class="stat-num" id="statHigh">—</div><div class="stat-lbl">высокой серьёзности</div></div>
+      <div class="stat-glass"><div class="stat-num" id="statHotspots">—</div><div class="stat-lbl">активных точек</div></div>
+      <div class="stat-glass"><div class="stat-num" id="statResolved">—</div><div class="stat-lbl">отмечено решённым</div></div>
+    </div>
+  </div>
+</header>
+
+<div class="body-wrap wrap">
+  <div class="panels">
+    <div class="card">
+      <div class="card-head"><h2>Приоритет</h2><button class="refresh-btn" id="refreshBtn1">Обновить</button></div>
+      <div class="card-hint">Точки, требующие внимания в первую очередь</div>
+      <div class="algo-note"><b>Формула:</b> score = (сигналы × 2) + вес серьёзности (низкая=1, средняя=3, высокая=6). Только активные (не решённые) сигналы.</div>
+      <div id="hotspotList"><div class="empty-state">Загрузка…</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Все сигналы</h2><button class="refresh-btn" id="refreshBtn2">Обновить</button></div>
+      <div class="card-hint">Отмечайте решённые или удаляйте ложные сигналы</div>
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-filter="all">Все</button>
+        <button class="filter-tab" data-filter="new">Активные</button>
+        <button class="filter-tab" data-filter="high">Высокая серьёзность</button>
+        <button class="filter-tab" data-filter="resolved">Решённые</button>
+      </div>
+      <div id="feedList"><div class="empty-state">Загрузка…</div></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap footer-row">
+    <span>Полог · Admin — данные общие для всех, кто открывает эту ссылку.</span>
+    <button class="reset-btn" id="resetBtn">Очистить все сигналы</button>
+  </div>
+</footer>
+
+<script>
+const sevWeight = { low: 1, med: 3, high: 6 };
+const sevLabel = { low: 'Низкая', med: 'Средняя', high: 'Высокая' };
+
+let allReports = [];
+let currentFilter = 'all';
+
+const hotspotList = document.getElementById('hotspotList');
+const feedList = document.getElementById('feedList');
+
+function timeAgo(ts){
+  const diff = Math.max(0, Date.now() - ts);
+  const mins = Math.floor(diff/60000);
+  if(mins < 1) return 'только что';
+  if(mins < 60) return `${mins} мин назад`;
+  const hrs = Math.floor(mins/60);
+  if(hrs < 24) return `${hrs} ч назад`;
+  return `${Math.floor(hrs/24)} дн назад`;
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+async function loadReports(){
+  hotspotList.innerHTML = '<div class="empty-state">Загрузка…</div>';
+  feedList.innerHTML = '<div class="empty-state">Загрузка…</div>';
+  try{
+    const listResult = await window.storage.list('reports:', true);
+    const keys = (listResult && listResult.keys) ? listResult.keys : [];
+    const reports = [];
+    for(const key of keys){
+      try{
+        const res = await window.storage.get(key, true);
+        if(res && res.value){
+          const parsed = JSON.parse(res.value);
+          parsed._key = key;
+          reports.push(parsed);
+        }
+      }catch(e){ /* skip unreadable entry */ }
+    }
+    reports.sort((a,b) => b.ts - a.ts);
+    allReports = reports;
+    renderStats();
+    renderHotspots();
+    renderFeed();
+  }catch(e){
+    hotspotList.innerHTML = '<div class="empty-state">Не удалось загрузить данные.</div>';
+    feedList.innerHTML = '<div class="empty-state">Не удалось загрузить данные.</div>';
+  }
+}
+
+function renderStats(){
+  const active = allReports.filter(r => r.status !== 'resolved');
+  document.getElementById('statTotal').textContent = allReports.length;
+  document.getElementById('statHigh').textContent = active.filter(r => r.sev === 'high').length;
+  document.getElementById('statResolved').textContent = allReports.filter(r => r.status === 'resolved').length;
+  const groups = new Set(active.map(r => (r.loc||'').trim().toLowerCase()));
+  document.getElementById('statHotspots').textContent = groups.size;
+}
+
+function renderHotspots(){
+  const active = allReports.filter(r => r.status !== 'resolved');
+  const groups = {};
+  for(const r of active){
+    const key = (r.loc || '').trim().toLowerCase();
+    if(!groups[key]) groups[key] = { loc: r.loc, count: 0, score: 0 };
+    groups[key].count += 1;
+    groups[key].score += 2 + (sevWeight[r.sev] || 1);
+  }
+  const ranked = Object.values(groups).sort((a,b) => b.score - a.score).slice(0, 8);
+  if(ranked.length === 0){
+    hotspotList.innerHTML = '<div class="empty-state">Нет активных сигналов.</div>';
+    return;
+  }
+  hotspotList.innerHTML = ranked.map((g, i) => `
+    <div class="hotspot ${g.score >= 10 ? 'crit' : ''}">
+      <div class="rank mono">${i+1}</div>
+      <div class="hotspot-body">
+        <div class="hotspot-loc">${escapeHtml(g.loc)}</div>
+        <div class="hotspot-meta">${g.count} сигнал${g.count===1?'':g.count<5?'а':'ов'}</div>
+      </div>
+      <div class="score-badge">${g.score}</div>
+    </div>
+  `).join('');
+}
+
+function renderFeed(){
+  let list = allReports;
+  if(currentFilter === 'new') list = list.filter(r => r.status !== 'resolved');
+  if(currentFilter === 'high') list = list.filter(r => r.sev === 'high' && r.status !== 'resolved');
+  if(currentFilter === 'resolved') list = list.filter(r => r.status === 'resolved');
+
+  if(list.length === 0){
+    feedList.innerHTML = '<div class="empty-state">Нет сигналов в этой категории.</div>';
+    return;
+  }
+
+  feedList.innerHTML = list.map(r => `
+    <div class="feed-item ${r.status === 'resolved' ? 'resolved' : ''}">
+      <div class="feed-top">
+        <div class="feed-loc">${escapeHtml(r.loc)}</div>
+        <div class="feed-tags">
+          <span class="sev-tag ${r.sev}">${sevLabel[r.sev] || r.sev}</span>
+          ${r.status === 'resolved' ? '<span class="status-tag">Решено</span>' : ''}
+        </div>
+      </div>
+      ${r.desc ? `<div class="feed-desc">${escapeHtml(r.desc)}</div>` : ''}
+      <div class="feed-bottom">
+        <span class="feed-time">${timeAgo(r.ts)}</span>
+        <div class="feed-actions">
+          ${r.status === 'resolved'
+            ? `<button class="action-btn" data-action="reopen" data-key="${r._key}">Вернуть в активные</button>`
+            : `<button class="action-btn" data-action="resolve" data-key="${r._key}">Отметить решённым</button>`}
+          <button class="action-btn danger" data-action="delete" data-key="${r._key}">Удалить</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  feedList.querySelectorAll('.action-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleAction(btn.dataset.action, btn.dataset.key));
+  });
+}
+
+async function handleAction(action, key){
+  const report = allReports.find(r => r._key === key);
+  if(!report) return;
+  try{
+    if(action === 'delete'){
+      await window.storage.delete(key, true);
+    } else if(action === 'resolve'){
+      report.status = 'resolved';
+      await window.storage.set(key, JSON.stringify({ loc: report.loc, desc: report.desc, sev: report.sev, ts: report.ts, status: 'resolved' }), true);
+    } else if(action === 'reopen'){
+      report.status = 'new';
+      await window.storage.set(key, JSON.stringify({ loc: report.loc, desc: report.desc, sev: report.sev, ts: report.ts, status: 'new' }), true);
+    }
+    await loadReports();
+  }catch(e){
+    alert('Не удалось выполнить действие. Попробуйте ещё раз.');
+  }
+}
+
+document.querySelectorAll('.filter-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentFilter = tab.dataset.filter;
+    renderFeed();
+  });
+});
+
+document.getElementById('refreshBtn1').addEventListener('click', loadReports);
+document.getElementById('refreshBtn2').addEventListener('click', loadReports);
+
+document.getElementById('resetBtn').addEventListener('click', async () => {
+  if(!confirm('Удалить все сигналы из общего списка? Это затронет данные всех посетителей.')) return;
+  try{
+    const listResult = await window.storage.list('reports:', true);
+    const keys = (listResult && listResult.keys) ? listResult.keys : [];
+    for(const key of keys){
+      try{ await window.storage.delete(key, true); }catch(e){ /* skip */ }
+    }
+    await loadReports();
+  }catch(e){
+    alert('Не удалось очистить список.');
+  }
+});
+
+loadReports();
+</script>
+
+</body>
+</html>
