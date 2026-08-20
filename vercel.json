@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/user",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/reporter",
+      "destination": "/index.html"
+    }
+  ]
+}
