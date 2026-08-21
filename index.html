@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Полог — сообщить о вырубке</title>
+<title>Полог — Сообщить о загрязнении</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -30,20 +30,21 @@
   @media(max-width:640px){.wrap{padding:0 20px;}}
   *:focus-visible{outline:2px solid var(--emerald);outline-offset:3px;border-radius:4px;}
 
-  /* ---------- fluid blob background layer ---------- */
-  .blob{position:absolute;filter:blur(0px);animation:blobMorph 11s ease-in-out infinite;}
-  @keyframes blobMorph{
-    0%,100%{border-radius:63% 37% 54% 46% / 55% 48% 52% 45%;}
-    33%{border-radius:42% 58% 68% 32% / 45% 62% 38% 55%;}
-    66%{border-radius:55% 45% 40% 60% / 60% 35% 65% 40%;}
-  }
-  @keyframes drift{0%,100%{transform:translate(0,0) rotate(0deg);}50%{transform:translate(-2%,3%) rotate(4deg);}}
-
-  /* ---------- NAV ---------- */
+  /* ---------- NAV & LANG SWITCH ---------- */
   nav{position:sticky;top:0;z-index:50;background:rgba(255,248,237,0.82);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
   nav .wrap{display:flex;align-items:center;justify-content:space-between;height:72px;}
   .logo{display:flex;align-items:center;gap:10px;font-family:'Fraunces',serif;font-weight:600;font-size:19px;}
   .logo-blob{width:26px;height:26px;background:linear-gradient(135deg,var(--emerald-deep),var(--mint));flex-shrink:0;animation:blobMorph 8s ease-in-out infinite;}
+  
+  .lang-switch{display:flex;gap:6px;background:rgba(11,42,32,0.05);padding:4px;border-radius:99px;}
+  .lang-btn{
+    border:none;background:transparent;padding:6px 12px;border-radius:99px;
+    font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;
+    color:var(--ink-soft);cursor:pointer;transition:all .2s ease;
+  }
+  .lang-btn.active{background:var(--emerald-deep);color:#fff;}
+  .lang-btn:hover:not(.active){color:var(--ink);}
+
   /* ---------- HERO ---------- */
   .hero{position:relative;padding:64px 0 100px;overflow:hidden;}
   .hero .blob-a{width:520px;height:520px;top:-180px;right:-160px;background:radial-gradient(circle at 30% 30%, rgba(87,201,160,0.35), rgba(87,201,160,0) 70%);}
@@ -82,7 +83,13 @@
   .hero-badge .num{font-family:'Fraunces',serif;font-size:26px;color:var(--coral-deep);}
   .hero-badge .lbl{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
 
-  /* ---------- WAVE DIVIDER ---------- */
+  /* ---------- ANIMATIONS & DIVIDER ---------- */
+  .blob{position:absolute;filter:blur(0px);animation:blobMorph 11s ease-in-out infinite;}
+  @keyframes blobMorph{
+    0%,100%{border-radius:63% 37% 54% 46% / 55% 48% 52% 45%;}
+    33%{border-radius:42% 58% 68% 32% / 45% 62% 38% 55%;}
+    66%{border-radius:55% 45% 40% 60% / 60% 35% 65% 40%;}
+  }
   .wave{display:block;width:100%;height:auto;margin-bottom:-2px;}
 
   /* ---------- HOW ---------- */
@@ -124,13 +131,13 @@
   @media(max-width:640px){.form-card{padding:28px 22px;}}
   label{display:block;font-size:13px;font-weight:600;color:var(--emerald-deep);margin:20px 0 8px;}
   label:first-of-type{margin-top:0;}
-  input[type=text],textarea,select{
+  input[type=text],textarea{
     width:100%;padding:13px 16px;border:1.5px solid var(--line);border-radius:16px;
     font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;background:#fff;color:var(--ink);
     transition:border-color .2s ease;
   }
   textarea{resize:vertical;min-height:90px;}
-  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--emerald);}
+  input:focus,textarea:focus{outline:none;border-color:var(--emerald);}
   .sev-options{display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;}
   .sev-opt{flex:1;min-width:100px;}
   .sev-opt input{position:absolute;opacity:0;pointer-events:none;}
@@ -160,7 +167,6 @@
     border-radius:16px;padding:12px 16px;font-size:13.5px;margin-top:8px;align-items:center;
   }
 
-  /* ---------- reveal on scroll ---------- */
   .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease, transform .7s ease;}
   .reveal.in{opacity:1;transform:translateY(0);}
 
@@ -176,11 +182,14 @@
 </head>
 <body>
 
-<svg width="0" height="0" style="position:absolute"><defs></defs></svg>
-
 <nav>
   <div class="wrap">
-    <div class="logo"><span class="logo-blob"></span>Полог</div>
+    <div class="logo"><span class="logo-blob"></span><span id="logo-text">Полог</span></div>
+    <div class="lang-switch">
+      <button class="lang-btn active" onclick="setLanguage('ru')">RU</button>
+      <button class="lang-btn" onclick="setLanguage('en')">EN</button>
+      <button class="lang-btn" onclick="setLanguage('uz')">UZ</button>
+    </div>
   </div>
 </nav>
 
@@ -188,23 +197,26 @@
   <div class="blob blob-a" style="position:absolute;"></div>
   <div class="wrap hero-inner">
     <div>
-      <div class="eyebrow"><span class="pulse-dot"></span>Сеть оповещений · сообщи за минуту</div>
-      <h1 class="hero-title">Увидел мусор —<br><em>расскажи</em>, пока не поздно</h1>
-      <p class="hero-sub">Спутники замечают мусор издалека, но точнее и раньше всех о ней узнают люди на месте. Опишите, что вы видите, — сигнал сразу попадёт в общий приоритетный список для тех, кто может отреагировать.</p>
+      <div class="eyebrow"><span class="pulse-dot"></span><span id="hero-eyebrow">Сеть оповещений · сообщи за минуту</span></div>
+      <h1 class="hero-title" id="hero-title">Увидел отходы —<br><em id="hero-title-em">расскажи</em>, пока не поздно</h1>
+      <p class="hero-sub" id="hero-sub">Спутники замечают загрязнения издалека, но точнее и раньше всех о них узнают люди на месте. Опишите, что вы видите, — сигнал сразу попадёт в приоритетный список для ответственных служб.</p>
       <div class="hero-ctas">
-        <a href="#report" class="btn-primary">Сообщить сейчас →</a>
-        <a href="#how" class="btn-ghost">Как это работает</a>
+        <a href="#report" class="btn-primary" id="btn-report">Сообщить сейчас →</a>
+        <a href="#how" class="btn-ghost" id="btn-how">Как это работает</a>
       </div>
     </div>
     <div class="hero-photo-wrap">
       <div class="hero-photo-glow"></div>
-      <img class="hero-photo" alt="Свет пробивается сквозь туманный лес" src="https://plus.unsplash.com/premium_photo-1661962911608-ea55ac7785da?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D">
-      <div class="hero-badge"><div class="num">&lt;1 мин</div><div class="lbl">чтобы отправить сигнал о вырубке</div></div>
+      <img class="hero-photo" alt="Лес и природа" src="https://plus.unsplash.com/premium_photo-1661962911608-ea55ac7785da?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0">
+      <div class="hero-badge">
+        <div class="num">&lt;1 мин</div>
+        <div class="lbl" id="badge-lbl">чтобы отправить сигнал о загрязнении</div>
+      </div>
     </div>
   </div>
 </header>
 
-<svg class="wave" viewBox="0 0 1440 100" preserveAspectRatio="none" style="display:block;">
+<svg class="wave" viewBox="0 0 1440 100" preserveAspectRatio="none">
   <path d="M0,40 C240,100 480,0 720,40 C960,80 1200,10 1440,50 L1440,100 L0,100 Z" fill="#0F3D2E"/>
 </svg>
 
@@ -212,38 +224,50 @@
   <div class="blob blob-b" style="position:absolute;"></div>
   <div class="wrap">
     <div class="section-head reveal">
-      <div class="eyebrow-light">Как это работает</div>
-      <h2 class="section-title">Три шага от того, что вы увидели, до того, кто выедет на место</h2>
+      <div class="eyebrow-light" id="how-eyebrow">Как это работает</div>
+      <h2 class="section-title" id="how-title">Три шага от того, что вы увидели, до реакций служб</h2>
     </div>
     <div class="steps">
-      <div class="step-card reveal"><div class="step-num">1</div><div class="step-title">Опишите</div><div class="step-desc">Локация, что происходит, насколько это серьёзно — без регистрации, без лишних полей.</div></div>
-      <div class="step-card reveal"><div class="step-num">2</div><div class="step-title">Система группирует</div><div class="step-desc">Сигнал складывается с другими сообщениями об этой же локации, формируя общую картину масштаба.</div></div>
-      <div class="step-card reveal"><div class="step-num">3</div><div class="step-title">Попадает в приоритет</div><div class="step-desc">Локации с наибольшим числом и серьёзностью сигналов поднимаются наверх списка для ответственных служб.</div></div>
+      <div class="step-card reveal">
+        <div class="step-num">1</div>
+        <div class="step-title" id="step1-title">Опишите</div>
+        <div class="step-desc" id="step1-desc">Локация, что происходит, насколько это серьёзно — без регистрации, без лишних полей.</div>
+      </div>
+      <div class="step-card reveal">
+        <div class="step-num">2</div>
+        <div class="step-title" id="step2-title">Система группирует</div>
+        <div class="step-desc" id="step2-desc">Сигнал складывается с другими сообщениями об этой же локации, формируя общую картину.</div>
+      </div>
+      <div class="step-card reveal">
+        <div class="step-num">3</div>
+        <div class="step-title" id="step3-title">Попадает в приоритет</div>
+        <div class="step-desc" id="step3-desc">Локации с наибольшим числом сигналов поднимаются наверх списка для реагирования.</div>
+      </div>
     </div>
   </div>
 </section>
 
 <section class="form-section" id="report">
-  <div class="form-bg-photo" style="background-image:url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8YnVpbGRpbmd8ZW58MHx8MHx8fDA%3D')"></div>
+  <div class="form-bg-photo" style="background-image:url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&auto=format&fit=crop&q=60')"></div>
   <div class="wrap">
     <div class="form-grid">
       <div class="form-side reveal">
-        <h2>Ваш сигнал <em>меняет</em> порядок приоритетов</h2>
-        <p>Чем больше людей сообщают об одном месте — тем выше оно поднимается в списке для тех, кто принимает решения. Это касается и вас.</p>
-        <div class="trust-note">Сообщения общие и видны в панели администратора. Не указывайте личные данные — только то, что вы наблюдали.</div>
+        <h2 id="form-side-title">Ваш сигнал <em id="form-side-em">меняет</em> порядок приоритетов</h2>
+        <p id="form-side-desc">Чем больше людей сообщают об одном месте — тем выше оно поднимается в списке для тех, кто принимает решения.</p>
+        <div class="trust-note" id="trust-note">Сообщения общие и видны в панели. Не указывайте личные данные — только факты.</div>
       </div>
       <div class="form-card reveal">
-        <label for="loc">Локация</label>
-        <input type="text" id="loc" placeholder="напр. бассейн р. Мадейра, ~40 км к югу от Порту-Велью">
+        <label for="loc" id="lbl-loc">Локация</label>
+        <input type="text" id="loc" placeholder="напр. Парк, ~400м от главного входа">
 
-        <label for="desc">Что вы видите</label>
-        <textarea id="desc" placeholder="Мусор, вонь, примерная площадь..."></textarea>
+        <label for="desc" id="lbl-desc">Что вы видите</label>
+        <textarea id="desc" placeholder="Скопление отходов, неприятный запах..."></textarea>
 
-        <label>Серьёзность</label>
+        <label id="lbl-sev">Серьёзность</label>
         <div class="sev-options">
-          <div class="sev-opt low"><input type="radio" name="sev" id="sev-low" value="low"><label for="sev-low">Низкая</label></div>
-          <div class="sev-opt med"><input type="radio" name="sev" id="sev-med" value="med" checked><label for="sev-med">Средняя</label></div>
-          <div class="sev-opt high"><input type="radio" name="sev" id="sev-high" value="high"><label for="sev-high">Высокая</label></div>
+          <div class="sev-opt low"><input type="radio" name="sev" id="sev-low" value="low"><label for="sev-low" id="lbl-sev-low">Низкая</label></div>
+          <div class="sev-opt med"><input type="radio" name="sev" id="sev-med" value="med" checked><label for="sev-med" id="lbl-sev-med">Средняя</label></div>
+          <div class="sev-opt high"><input type="radio" name="sev" id="sev-high" value="high"><label for="sev-high" id="lbl-sev-high">Высокая</label></div>
         </div>
 
         <button class="submit-btn" id="submitBtn">Отправить сигнал</button>
@@ -256,64 +280,218 @@
 
 <footer>
   <div class="wrap footer-row">
-    <span>Полог — сеть оповещений. Сообщения общие для всех посетителей.</span>
+    <span id="footer-text">Полог — сеть оповещений. Сообщения общие для всех посетителей.</span>
   </div>
 </footer>
 
 <script>
-const sevLabel = { low:'Низкая', med:'Средняя', high:'Высокая' };
+let currentLang = 'ru';
+
+const dict = {
+  ru: {
+    logoText: "Полог",
+    heroEyebrow: "Сеть оповещений · сообщи за минуту",
+    heroTitle: "Увидел отходы —<br>",
+    heroTitleEm: "расскажи",
+    heroTitleEnd: ", пока не поздно",
+    heroSub: "Спутники замечают загрязнения издалека, но точнее и раньше всех о них узнают люди на месте. Опишите, что вы видите, — сигнал сразу попадёт в приоритетный список для ответственных служб.",
+    btnReport: "Сообщить сейчас →",
+    btnHow: "Как это работает",
+    badgeLbl: "чтобы отправить сигнал о загрязнении",
+    howEyebrow: "Как это работает",
+    howTitle: "Три шага от того, что вы увидели, до реакций служб",
+    step1Title: "Опишите",
+    step1Desc: "Локация, что происходит, насколько это серьёзно — без регистрации, без лишних полей.",
+    step2Title: "Система группирует",
+    step2Desc: "Сигнал складывается с другими сообщениями об этой же локации, формируя общую картину.",
+    step3Title: "Попадает в приоритет",
+    step3Desc: "Локации с наибольшим числом сигналов поднимаются наверх списка для реагирования.",
+    formSideTitle: "Ваш сигнал ",
+    formSideEm: "меняет",
+    formSideTitleEnd: " порядок приоритетов",
+    formSideDesc: "Чем больше людей сообщают об одном месте — тем выше оно поднимается в списке для тех, кто принимает решения.",
+    trustNote: "Сообщения общие и видны в панели. Не указывайте личные данные — только факты.",
+    lblLoc: "Локация",
+    phLoc: "напр. Парк, ~400м от главного входа",
+    lblDesc: "Что вы видите",
+    phDesc: "Скопление отходов, неприятный запах...",
+    lblSev: "Серьёзность",
+    sevLow: "Низкая",
+    sevMed: "Средняя",
+    sevHigh: "Высокая",
+    submitBtn: "Отправить сигнал",
+    footerText: "Полог — сеть оповещений. Сообщения общие для всех посетителей.",
+    msgErrLoc: "Укажите локацию — без неё сигнал невозможно сгруппировать.",
+    msgSending: "Отправка…",
+    msgSuccess: "Спасибо. Сигнал добавлен в общий список.",
+    msgFail: "Не удалось отправить. Попробуйте ещё раз.",
+    sessionTitle: "Отправлено в этой сессии"
+  },
+  en: {
+    logoText: "Polog",
+    heroEyebrow: "Alert Network · Report in a minute",
+    heroTitle: "Spotted waste? <br>",
+    heroTitleEm: "Report it",
+    heroTitleEnd: " before it isn't too late",
+    heroSub: "Satellites spot pollution from above, but locals see it first. Describe what you observe—your signal goes straight to the priority list for responders.",
+    btnReport: "Report now →",
+    btnHow: "How it works",
+    badgeLbl: "to send a pollution signal",
+    howEyebrow: "How it works",
+    howTitle: "Three steps from what you see to emergency action",
+    step1Title: "Describe",
+    step1Desc: "Location, issue details, and severity level—no registration required.",
+    step2Title: "Grouped",
+    step2Desc: "Your alert combines with existing reports in the same area to show scale.",
+    step3Title: "Prioritized",
+    step3Desc: "Locations with more reports move to the top of the action list.",
+    formSideTitle: "Your alert ",
+    formSideEm: "changes",
+    formSideTitleEnd: " priority orders",
+    formSideDesc: "The more reports a location receives, the higher it moves up for decision makers.",
+    trustNote: "Reports are public to responders. Avoid personal data—stick to facts.",
+    lblLoc: "Location",
+    phLoc: "e.g., Central Park, ~400m from main gate",
+    lblDesc: "What do you see?",
+    phDesc: "Waste accumulation, bad odor...",
+    lblSev: "Severity",
+    sevLow: "Low",
+    sevMed: "Medium",
+    sevHigh: "High",
+    submitBtn: "Send signal",
+    footerText: "Polog alert system. All submissions are shared publicly.",
+    msgErrLoc: "Please provide a location to group this alert.",
+    msgSending: "Sending…",
+    msgSuccess: "Thank you. Signal added to the list.",
+    msgFail: "Failed to send. Please try again.",
+    sessionTitle: "Sent during this session"
+  },
+  uz: {
+    logoText: "Polog",
+    heroEyebrow: "Ogohlantirish tarmog'i · Bir daqiqada xabar bering",
+    heroTitle: "Chiqindini ko'rdingizmi? <br>",
+    heroTitleEm: "Xabar bering",
+    heroTitleEnd: ", kech bo'lmasdan",
+    heroSub: "Yo'ldoshlar chiqindini uzoqdan payqaydi, lekin eng birinchi mahalliy aholi biladi. Nima ko'rganingizni yozing — signal darhol mas'ul xizmatlar ro'yxatiga tushadi.",
+    btnReport: "Xabar berish →",
+    btnHow: "Bu qanday ishlaydi",
+    badgeLbl: "chiqindi haqida signal yuborish uchun",
+    howEyebrow: "Bu qanday ishlaydi",
+    howTitle: "Siz ko'rgan voqeadan xizmatlar munosabatigacha 3 qadam",
+    step1Title: "Tavsiflang",
+    step1Desc: "Joylashuv, nima sodir bo'lmoqda, darajasi — ro'yxatdan o'tmasdan.",
+    step2Title: "Guruhlash",
+    step2Desc: "Sizning signal ushbu hududdagi boshqa xabarlar bilan birlashtiriladi.",
+    step3Title: "Ustuvorlik",
+    step3Desc: "Ko'proq signal tushgan joylar ro'yxatning yuqorisiga ko'tariladi.",
+    formSideTitle: "Sizning signalizngiz ",
+    formSideEm: "o'zgartiradi",
+    formSideTitleEnd: " tartibni",
+    formSideDesc: "Bir joy haqida qancha ko'p xabar berilsa, u qaror qabul qiluvchilar uchun shuncha yuqoriga chiqadi.",
+    trustNote: "Xabarlar ochiq holda ko'rinadi. Shaxsiy ma'lumotlarni kiritmang.",
+    lblLoc: "Joylashuv (Lokatsiya)",
+    phLoc: "masalan: Bo'stonliq tuman, soy bo'yi",
+    lblDesc: "Nimani ko'ryapsiz",
+    phDesc: "Chiqindi to'planishi, noxush hid...",
+    lblSev: "Jiddiyligi",
+    sevLow: "Past",
+    sevMed: "O'rta",
+    sevHigh: "Yuqori",
+    submitBtn: "Signal yuborish",
+    footerText: "Polog — ogohlantirish tarmog'i. Xabarlar barcha uchun ochiq.",
+    msgErrLoc: "Lokatsiyani kiriting — usiz signalni guruhlab bo'lmaydi.",
+    msgSending: "Yuborilmoqda…",
+    msgSuccess: "Rahmat. Signal umumiy ro'yxatga qo'shildi.",
+    msgFail: "Yuborib bo'lmadi. Qayta urinib ko'ring.",
+    sessionTitle: "Ushbu seansda yuborilganlar"
+  }
+};
+
+function setLanguage(lang) {
+  currentLang = lang;
+  
+  // Обновляем активность кнопок
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.toLowerCase() === lang);
+  });
+
+  const t = dict[lang];
+
+  // Перевод элементов
+  document.getElementById('logo-text').textContent = t.logoText;
+  document.getElementById('hero-eyebrow').textContent = t.heroEyebrow;
+  
+  document.getElementById('hero-title').innerHTML = `${t.heroTitle}<em>${t.heroTitleEm}</em>${t.heroTitleEnd}`;
+  document.getElementById('hero-sub').textContent = t.heroSub;
+  document.getElementById('btn-report').textContent = t.btnReport;
+  document.getElementById('btn-how').textContent = t.btnHow;
+  document.getElementById('badge-lbl').textContent = t.badgeLbl;
+
+  document.getElementById('how-eyebrow').textContent = t.howEyebrow;
+  document.getElementById('how-title').textContent = t.howTitle;
+  document.getElementById('step1-title').textContent = t.step1Title;
+  document.getElementById('step1-desc').textContent = t.step1Desc;
+  document.getElementById('step2-title').textContent = t.step2Title;
+  document.getElementById('step2-desc').textContent = t.step2Desc;
+  document.getElementById('step3-title').textContent = t.step3Title;
+  document.getElementById('step3-desc').textContent = t.step3Desc;
+
+  document.getElementById('form-side-title').innerHTML = `${t.formSideTitle}<em>${t.formSideEm}</em>${t.formSideTitleEnd}`;
+  document.getElementById('form-side-desc').textContent = t.formSideDesc;
+  document.getElementById('trust-note').textContent = t.trustNote;
+
+  document.getElementById('lbl-loc').textContent = t.lblLoc;
+  document.getElementById('loc').placeholder = t.phLoc;
+  document.getElementById('lbl-desc').textContent = t.lblDesc;
+  document.getElementById('desc').placeholder = t.phDesc;
+  document.getElementById('lbl-sev').textContent = t.lblSev;
+
+  document.getElementById('lbl-sev-low').textContent = t.sevLow;
+  document.getElementById('lbl-sev-med').textContent = t.sevMed;
+  document.getElementById('lbl-sev-high').textContent = t.sevHigh;
+
+  document.getElementById('submitBtn').textContent = t.submitBtn;
+  document.getElementById('footer-text').textContent = t.footerText;
+
+  renderSessionReports();
+}
+
+// Форма
 const locInput = document.getElementById('loc');
 const descInput = document.getElementById('desc');
 const submitBtn = document.getElementById('submitBtn');
 const formMsg = document.getElementById('formMsg');
 const justSubmitted = document.getElementById('justSubmitted');
 const sessionReports = [];
-const reportsStorage = createReportsStorage();
-
-function createReportsStorage(){
-  if(window.storage){
-    return {
-      set: (key, value) => window.storage.set(key, value, true)
-    };
-  }
-
-  return {
-    set(key, value){
-      localStorage.setItem(key, value);
-      return Promise.resolve({ key, value });
-    }
-  };
-}
 
 submitBtn.addEventListener('click', async () => {
+  const t = dict[currentLang];
   const loc = locInput.value.trim();
   const desc = descInput.value.trim();
   const sev = document.querySelector('input[name=sev]:checked').value;
   formMsg.classList.remove('err');
 
   if(!loc){
-    formMsg.textContent = 'Укажите локацию — без неё сигнал невозможно сгруппировать.';
+    formMsg.textContent = t.msgErrLoc;
     formMsg.classList.add('err');
     return;
   }
 
   submitBtn.disabled = true;
-  formMsg.textContent = 'Отправка…';
+  formMsg.textContent = t.msgSending;
 
-  const report = { loc, desc, sev, ts: Date.now(), status: 'new' };
-  const key = `reports:${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+  const report = { loc, desc, sev, ts: Date.now() };
 
   try{
-    const result = await reportsStorage.set(key, JSON.stringify(report));
-    if(!result) throw new Error('empty result');
-    formMsg.textContent = 'Спасибо. Сигнал добавлен в общий список.';
+    localStorage.setItem(`reports:${Date.now()}`, JSON.stringify(report));
+    formMsg.textContent = t.msgSuccess;
     sessionReports.unshift(report);
     renderSessionReports();
     locInput.value = '';
     descInput.value = '';
     document.getElementById('sev-med').checked = true;
   }catch(e){
-    formMsg.textContent = 'Не удалось отправить. Попробуйте ещё раз.';
+    formMsg.textContent = t.msgFail;
     formMsg.classList.add('err');
   }finally{
     submitBtn.disabled = false;
@@ -322,8 +500,16 @@ submitBtn.addEventListener('click', async () => {
 
 function renderSessionReports(){
   if(sessionReports.length === 0){ justSubmitted.innerHTML = ''; return; }
-  justSubmitted.innerHTML = '<div style="font-size:12.5px;color:var(--ink-soft);font-weight:600;margin-top:18px;">Отправлено в этой сессии</div>' +
-    sessionReports.map(r => `<div class="just-submitted-item"><span>${escapeHtml(r.loc)}</span><span>${sevLabel[r.sev]}</span></div>`).join('');
+  const t = dict[currentLang];
+  
+  const getSevName = (sev) => {
+    if(sev === 'low') return t.sevLow;
+    if(sev === 'high') return t.sevHigh;
+    return t.sevMed;
+  };
+
+  justSubmitted.innerHTML = `<div style="font-size:12.5px;color:var(--ink-soft);font-weight:600;margin-top:18px;">${t.sessionTitle}</div>` +
+    sessionReports.map(r => `<div class="just-submitted-item"><span>${escapeHtml(r.loc)}</span><span>${getSevName(r.sev)}</span></div>`).join('');
 }
 
 function escapeHtml(str){
@@ -332,7 +518,7 @@ function escapeHtml(str){
   return div.innerHTML;
 }
 
-// scroll reveal
+// Scroll animation
 const observer = new IntersectionObserver((entries) => {
   entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('in'); });
 }, { threshold: 0.15 });
