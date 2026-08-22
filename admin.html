@@ -115,7 +115,7 @@
 
   footer{padding:20px 0 60px;}
   .footer-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;border-top:1px solid var(--line);padding-top:24px;font-size:13px;color:var(--ink-soft);}
-  .reset-btn{background:none;border:none;color:var(--coral-deep);cursor:pointer;font-size:13px;font-weight:600;}
+  .reset-btn{background:none;border:none;color:var(--coral-deep);text-decoration:underline;cursor:pointer;font-size:13px;font-weight:600;}
 
   @media(prefers-reduced-motion:reduce){ *{animation:none !important;transition:none !important;} }
 </style>
@@ -234,93 +234,33 @@ function createReportsStorage(){
   };
 }
 
-// 1. Загрузка данных с Node.js сервера
 async function loadReports(){
-  try {
-    const response = await fetch('/api/reports');
-    if (!response.ok) throw new Error();
-    
-    const reports = await response.json();
+  hotspotList.innerHTML = '<div class="empty-state">Загрузка…</div>';
+  feedList.innerHTML = '<div class="empty-state">Загрузка…</div>';
+  try{
+    const listResult = await reportsStorage.list('reports:');
+    const keys = (listResult && listResult.keys) ? listResult.keys : [];
+    const reports = [];
+    for(const key of keys){
+      try{
+        const res = await reportsStorage.get(key);
+        if(res && res.value){
+          const parsed = JSON.parse(res.value);
+          parsed._key = key;
+          reports.push(parsed);
+        }
+      }catch(e){ /* skip unreadable entry */ }
+    }
     reports.sort((a,b) => b.ts - a.ts);
     allReports = reports;
-
     renderStats();
     renderHotspots();
     renderFeed();
-  } catch(e) {
-    hotspotList.innerHTML = '<div class="empty-state">Не удалось загрузить данные с сервера.</div>';
-    feedList.innerHTML = '<div class="empty-state">Не удалось загрузить данные с сервера.</div>';
+  }catch(e){
+    hotspotList.innerHTML = '<div class="empty-state">Не удалось загрузить данные.</div>';
+    feedList.innerHTML = '<div class="empty-state">Не удалось загрузить данные.</div>';
   }
 }
-
-// 2. Обработка действий (Удалить / Отметить решённым)
-async function handleAction(action, key){
-  try {
-    if (action === 'delete') {
-      await fetch('/api/reports', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _key: key })
-      });
-    } else if (action === 'resolve' || action === 'reopen') {
-      const newStatus = action === 'resolve' ? 'resolved' : 'new';
-      await fetch('/api/reports', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _key: key, status: newStatus })
-      });
-    }
-    await loadReports();
-  } catch(e) {
-    alert('Не удалось выполнить действие.');
-  }
-}
-
-// 3. Автоматическое обновление каждые 3 секунды
-setInterval(loadReports, 3000);// 1. Загрузка данных с Node.js сервера
-async function loadReports(){
-  try {
-    const response = await fetch('/api/reports');
-    if (!response.ok) throw new Error();
-    
-    const reports = await response.json();
-    reports.sort((a,b) => b.ts - a.ts);
-    allReports = reports;
-
-    renderStats();
-    renderHotspots();
-    renderFeed();
-  } catch(e) {
-    hotspotList.innerHTML = '<div class="empty-state">Не удалось загрузить данные с сервера.</div>';
-    feedList.innerHTML = '<div class="empty-state">Не удалось загрузить данные с сервера.</div>';
-  }
-}
-
-// 2. Обработка действий (Удалить / Отметить решённым)
-async function handleAction(action, key){
-  try {
-    if (action === 'delete') {
-      await fetch('/api/reports', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _key: key })
-      });
-    } else if (action === 'resolve' || action === 'reopen') {
-      const newStatus = action === 'resolve' ? 'resolved' : 'new';
-      await fetch('/api/reports', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _key: key, status: newStatus })
-      });
-    }
-    await loadReports();
-  } catch(e) {
-    alert('Не удалось выполнить действие.');
-  }
-}
-
-// 3. Автоматическое обновление каждые 3 секунды
-setInterval(loadReports, 3000);
 
 function renderStats(){
   const active = allReports.filter(r => r.status !== 'resolved');
@@ -427,15 +367,15 @@ document.getElementById('refreshBtn1').addEventListener('click', loadReports);
 document.getElementById('refreshBtn2').addEventListener('click', loadReports);
 
 document.getElementById('resetBtn').addEventListener('click', async () => {
-  if(!confirm('Удалить все сигналы из общего списка?')) return;
-  try {
-    await fetch('/api/reports', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deleteAll: true })
-    });
+  if(!confirm('Удалить все сигналы из общего списка? Это затронет данные всех посетителей.')) return;
+  try{
+    const listResult = await reportsStorage.list('reports:');
+    const keys = (listResult && listResult.keys) ? listResult.keys : [];
+    for(const key of keys){
+      try{ await reportsStorage.delete(key); }catch(e){ /* skip */ }
+    }
     await loadReports();
-  } catch(e) {
+  }catch(e){
     alert('Не удалось очистить список.');
   }
 });
