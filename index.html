@@ -482,18 +482,28 @@ submitBtn.addEventListener('click', async () => {
 
   const report = { loc, desc, sev, ts: Date.now() };
 
-  try{
-    localStorage.setItem(`reports:${Date.now()}`, JSON.stringify(report));
-    formMsg.textContent = t.msgSuccess;
-    sessionReports.unshift(report);
-    renderSessionReports();
-    locInput.value = '';
-    descInput.value = '';
-    document.getElementById('sev-med').checked = true;
-  }catch(e){
+ try {
+    const response = await fetch('/api/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(report)
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      formMsg.textContent = t.msgSuccess;
+      sessionReports.unshift(data.report);
+      renderSessionReports();
+      locInput.value = '';
+      descInput.value = '';
+      document.getElementById('sev-med').checked = true;
+    } else {
+      throw new Error('Ошибка сети');
+    }
+  } catch(e) {
     formMsg.textContent = t.msgFail;
     formMsg.classList.add('err');
-  }finally{
+  } finally {
     submitBtn.disabled = false;
   }
 });
