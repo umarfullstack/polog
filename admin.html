@@ -179,7 +179,6 @@ const sevLabel = { low: 'Низкая', med: 'Средняя', high: 'Высок
 
 let allReports = [];
 let currentFilter = 'all';
-const reportsStorage = createReportsStorage();
 
 const hotspotList = document.getElementById('hotspotList');
 const feedList = document.getElementById('feedList');
@@ -200,59 +199,13 @@ function escapeHtml(str){
   return div.innerHTML;
 }
 
-function createReportsStorage(){
-  if(window.storage){
-    return {
-      list: prefix => window.storage.list(prefix, true),
-      get: key => window.storage.get(key, true),
-      set: (key, value) => window.storage.set(key, value, true),
-      delete: key => window.storage.delete(key, true)
-    };
-  }
-
-  return {
-    list(prefix){
-      const keys = [];
-      for(let i = 0; i < localStorage.length; i += 1){
-        const key = localStorage.key(i);
-        if(key && key.startsWith(prefix)) keys.push(key);
-      }
-      return Promise.resolve({ keys });
-    },
-    get(key){
-      const value = localStorage.getItem(key);
-      return Promise.resolve(value === null ? null : { value });
-    },
-    set(key, value){
-      localStorage.setItem(key, value);
-      return Promise.resolve({ key, value });
-    },
-    delete(key){
-      localStorage.removeItem(key);
-      return Promise.resolve(true);
-    }
-  };
-}
-
 async function loadReports(){
   hotspotList.innerHTML = '<div class="empty-state">Загрузка…</div>';
   feedList.innerHTML = '<div class="empty-state">Загрузка…</div>';
   try{
-    const listResult = await reportsStorage.list('reports:');
-    const keys = (listResult && listResult.keys) ? listResult.keys : [];
-    const reports = [];
-    for(const key of keys){
-      try{
-        const res = await reportsStorage.get(key);
-        if(res && res.value){
-          const parsed = JSON.parse(res.value);
-          parsed._key = key;
-          reports.push(parsed);
-        }
-      }catch(e){ /* skip unreadable entry */ }
-    }
-    reports.sort((a,b) => b.ts - a.ts);
-    allReports = reports;
+    const res = await fetch('/api/reports');
+    if(!res.ok) throw new Error('Ошибка сети');
+    allReports = await res.json();
     renderStats();
     renderHotspots();
     renderFeed();
@@ -340,13 +293,15 @@ async function handleAction(action, key){
   if(!report) return;
   try{
     if(action === 'delete'){
-      await reportsStorage.delete(key);
-    } else if(action === 'resolve'){
-      report.status = 'resolved';
-      await reportsStorage.set(key, JSON.stringify({ loc: report.loc, desc: report.desc, sev: report.sev, ts: report.ts, status: 'resolved' }));
-    } else if(action === 'reopen'){
-      report.status = 'new';
-      await reportsStorage.set(key, JSON.stringify({ loc: report.loc, desc: report.desc, sev: report.sev, ts: report.ts, status: 'new' }));
+      const res = await fetch(`/api/reports?key=${encodeURIComponent(key)}`, { method: 'DELETE' });
+      if(!res.ok) throw new Error('Ошибка сети');
+    } else if(action === 'resolve' || action === 'reopen'){
+      const res = await fetch(`/api/reports?key=${encodeURIComponent(key)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: action === 'resolve' ? 'resolved' : 'new' })
+      });
+      if(!res.ok) throw new Error('Ошибка сети');
     }
     await loadReports();
   }catch(e){
@@ -369,11 +324,8 @@ document.getElementById('refreshBtn2').addEventListener('click', loadReports);
 document.getElementById('resetBtn').addEventListener('click', async () => {
   if(!confirm('Удалить все сигналы из общего списка? Это затронет данные всех посетителей.')) return;
   try{
-    const listResult = await reportsStorage.list('reports:');
-    const keys = (listResult && listResult.keys) ? listResult.keys : [];
-    for(const key of keys){
-      try{ await reportsStorage.delete(key); }catch(e){ /* skip */ }
-    }
+    const res = await fetch('/api/reports?all=true', { method: 'DELETE' });
+    if(!res.ok) throw new Error('Ошибка сети');
     await loadReports();
   }catch(e){
     alert('Не удалось очистить список.');
