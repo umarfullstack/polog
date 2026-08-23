@@ -71,7 +71,7 @@
   .hero-photo-wrap{position:relative;}
   .hero-photo{
     width:100%;aspect-ratio:4/5;object-fit:cover;
-    clip-path:path('M320,4C420,20,540,60,560,160C580,260,540,380,440,430C340,480,180,470,90,400C0,330,-10,200,40,110C90,20,220,-12,320,4Z');
+    clip-path:url(#heroBlob);
     display:block;
   }
   .hero-photo-glow{position:absolute;inset:-20px;background:linear-gradient(135deg,var(--mint),var(--coral));opacity:0.25;z-index:-1;filter:blur(30px);animation:blobMorph 9s ease-in-out infinite;}
@@ -181,6 +181,14 @@
 </style>
 </head>
 <body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <clipPath id="heroBlob" clipPathUnits="objectBoundingBox">
+      <path d="M0.559,0.033 C0.729,0.065 0.932,0.146 0.966,0.350 C1.000,0.553 0.932,0.797 0.763,0.898 C0.593,1.000 0.322,0.980 0.170,0.837 C0.017,0.695 0.000,0.431 0.085,0.248 C0.170,0.065 0.390,0.000 0.559,0.033 Z"/>
+    </clipPath>
+  </defs>
+</svg>
 
 <nav>
   <div class="wrap">
