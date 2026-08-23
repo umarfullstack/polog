@@ -456,6 +456,22 @@ function setLanguage(lang) {
   renderSessionReports();
 }
 
+// Хранилище сигналов (то же, что использует панель администратора)
+function createReportsStorage(){
+  if(window.storage){
+    return {
+      set: (key, value) => window.storage.set(key, value, true)
+    };
+  }
+  return {
+    set(key, value){
+      localStorage.setItem(key, value);
+      return Promise.resolve({ key, value });
+    }
+  };
+}
+const reportsStorage = createReportsStorage();
+
 // Форма
 const locInput = document.getElementById('loc');
 const descInput = document.getElementById('desc');
@@ -480,26 +496,18 @@ submitBtn.addEventListener('click', async () => {
   submitBtn.disabled = true;
   formMsg.textContent = t.msgSending;
 
-  const report = { loc, desc, sev, ts: Date.now() };
+  const ts = Date.now();
+  const key = `reports:${ts}-${Math.random().toString(36).slice(2, 8)}`;
+  const report = { loc, desc, sev, ts, status: 'new' };
 
- try {
-    const response = await fetch('/api/reports', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(report)
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      formMsg.textContent = t.msgSuccess;
-      sessionReports.unshift(data.report);
-      renderSessionReports();
-      locInput.value = '';
-      descInput.value = '';
-      document.getElementById('sev-med').checked = true;
-    } else {
-      throw new Error('Ошибка сети');
-    }
+  try {
+    await reportsStorage.set(key, JSON.stringify(report));
+    formMsg.textContent = t.msgSuccess;
+    sessionReports.unshift(report);
+    renderSessionReports();
+    locInput.value = '';
+    descInput.value = '';
+    document.getElementById('sev-med').checked = true;
   } catch(e) {
     formMsg.textContent = t.msgFail;
     formMsg.classList.add('err');
