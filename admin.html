@@ -105,6 +105,8 @@
   .status-tag{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--line);color:var(--ink-soft);}
   .feed-desc{margin-top:8px;font-size:14px;color:var(--ink-soft);}
   .feed-phone{margin-top:4px;font-size:13px;color:var(--ink-soft);}
+  .feed-sender{margin-top:4px;font-size:13px;color:var(--ink-soft);}
+  .status-tag.banned{background:var(--coral-deep);color:#fff;}
   .feed-photo{max-width:220px;max-height:220px;border-radius:14px;margin-top:10px;display:block;object-fit:cover;}
   .feed-bottom{margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
   .feed-time{font-size:11.5px;color:var(--ink-soft);}
@@ -180,6 +182,7 @@ const sevWeight = { low: 1, med: 3, high: 6 };
 const sevLabel = { low: 'Низкая', med: 'Средняя', high: 'Высокая' };
 
 let allReports = [];
+let bannedIds = new Set();
 let currentFilter = 'all';
 
 const hotspotList = document.getElementById('hotspotList');
@@ -205,9 +208,13 @@ async function loadReports(){
   hotspotList.innerHTML = '<div class="empty-state">Загрузка…</div>';
   feedList.innerHTML = '<div class="empty-state">Загрузка…</div>';
   try{
-    const res = await fetch('/api/reports');
-    if(!res.ok) throw new Error('Ошибка сети');
-    allReports = await res.json();
+    const [reportsRes, bannedRes] = await Promise.all([
+      fetch('/api/reports'),
+      fetch('/api/telegram-ban')
+    ]);
+    if(!reportsRes.ok) throw new Error('Ошибка сети');
+    allReports = await reportsRes.json();
+    bannedIds = new Set(bannedRes.ok ? await bannedRes.json() : []);
     renderStats();
     renderHotspots();
     renderFeed();
@@ -263,17 +270,22 @@ function renderFeed(){
     return;
   }
 
-  feedList.innerHTML = list.map(r => `
+  feedList.innerHTML = list.map(r => {
+    const banned = r.tgUserId != null && bannedIds.has(String(r.tgUserId));
+    const senderName = [r.tgName, r.tgUsername].filter(Boolean).join(' ');
+    return `
     <div class="feed-item ${r.status === 'resolved' ? 'resolved' : ''}">
       <div class="feed-top">
         <div class="feed-loc">${escapeHtml(r.loc)}</div>
         <div class="feed-tags">
           <span class="sev-tag ${r.sev}">${sevLabel[r.sev] || r.sev}</span>
           ${r.source === 'telegram' ? '<span class="status-tag">Telegram</span>' : ''}
+          ${banned ? '<span class="status-tag banned">Забанен</span>' : ''}
           ${r.status === 'resolved' ? '<span class="status-tag">Решено</span>' : ''}
         </div>
       </div>
       ${r.desc ? `<div class="feed-desc">${escapeHtml(r.desc)}</div>` : ''}
+      ${senderName ? `<div class="feed-sender">👤 ${escapeHtml(senderName)}</div>` : ''}
       ${r.phone ? `<div class="feed-phone">📞 ${escapeHtml(r.phone)}</div>` : ''}
       ${r.photo ? `<img class="feed-photo" src="/api/telegram-photo?file_id=${encodeURIComponent(r.photo)}" alt="Фото сигнала" loading="lazy">` : ''}
       <div class="feed-bottom">
@@ -282,20 +294,24 @@ function renderFeed(){
           ${r.status === 'resolved'
             ? `<button class="action-btn" data-action="reopen" data-key="${r._key}">Вернуть в активные</button>`
             : `<button class="action-btn" data-action="resolve" data-key="${r._key}">Отметить решённым</button>`}
+          ${r.tgUserId != null
+            ? (banned
+                ? `<button class="action-btn" data-action="unban" data-tguser="${r.tgUserId}">Разбанить</button>`
+                : `<button class="action-btn danger" data-action="ban" data-tguser="${r.tgUserId}">Забанить</button>`)
+            : ''}
           <button class="action-btn danger" data-action="delete" data-key="${r._key}">Удалить</button>
         </div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   feedList.querySelectorAll('.action-btn').forEach(btn => {
-    btn.addEventListener('click', () => handleAction(btn.dataset.action, btn.dataset.key));
+    btn.addEventListener('click', () => handleAction(btn.dataset.action, btn.dataset.key, btn.dataset.tguser));
   });
 }
 
-async function handleAction(action, key){
-  const report = allReports.find(r => r._key === key);
-  if(!report) return;
+async function handleAction(action, key, tgUserId){
   try{
     if(action === 'delete'){
       const res = await fetch(`/api/reports?key=${encodeURIComponent(key)}`, { method: 'DELETE' });
@@ -306,6 +322,17 @@ async function handleAction(action, key){
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: action === 'resolve' ? 'resolved' : 'new' })
       });
+      if(!res.ok) throw new Error('Ошибка сети');
+    } else if(action === 'ban'){
+      if(!confirm('Забанить этого пользователя в Telegram-боте? Он больше не сможет отправлять сигналы.')) return;
+      const res = await fetch('/api/telegram-ban', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tgUserId })
+      });
+      if(!res.ok) throw new Error('Ошибка сети');
+    } else if(action === 'unban'){
+      const res = await fetch(`/api/telegram-ban?tgUserId=${encodeURIComponent(tgUserId)}`, { method: 'DELETE' });
       if(!res.ok) throw new Error('Ошибка сети');
     }
     await loadReports();

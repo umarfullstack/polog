@@ -7,6 +7,7 @@ const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_R
 
 const REPORTS_KEY = 'polog:reports';
 const STATE_KEY = 'polog:tgstate';
+const BANNED_KEY = 'polog:tgbanned';
 
 const REPORT_BTN = '🚨 Сообщить о загрязнении';
 const CANCEL_BTN = '✖️ Отмена';
@@ -78,6 +79,20 @@ async function clearState(chatId) {
   await redis(['HDEL', STATE_KEY, String(chatId)]);
 }
 
+async function isBanned(userId) {
+  const res = await redis(['SISMEMBER', BANNED_KEY, String(userId)]);
+  return res === 1;
+}
+
+function fromInfo(from) {
+  const name = [from.first_name, from.last_name].filter(Boolean).join(' ').trim();
+  return {
+    tgUserId: from.id,
+    tgName: name,
+    tgUsername: from.username ? `@${from.username}` : ''
+  };
+}
+
 async function startFlow(chatId) {
   await setState(chatId, { step: 'loc' });
   await tg('sendMessage', {
@@ -108,6 +123,12 @@ module.exports = async function handler(req, res) {
       const cq = update.callback_query;
       const chatId = cq.message.chat.id;
       const data = cq.data || '';
+
+      if (cq.from && (await isBanned(cq.from.id))) {
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Вы заблокированы и не можете отправлять сигналы.', show_alert: true });
+        await clearState(chatId);
+        return res.status(200).json({ ok: true });
+      }
       await tg('answerCallbackQuery', { callback_query_id: cq.id });
 
       if (data.startsWith('sev_')) {
@@ -125,7 +146,8 @@ module.exports = async function handler(req, res) {
           sev,
           ts: Date.now(),
           status: 'new',
-          source: 'telegram'
+          source: 'telegram',
+          ...fromInfo(cq.from)
         };
         await redis(['HSET', REPORTS_KEY, key, JSON.stringify(report)]);
         await clearState(chatId);
@@ -147,6 +169,16 @@ module.exports = async function handler(req, res) {
     if (!msg) return res.status(200).json({ ok: true });
     const chatId = msg.chat.id;
     const text = (msg.text || '').trim();
+
+    if (msg.from && (await isBanned(msg.from.id))) {
+      await clearState(chatId);
+      await tg('sendMessage', {
+        chat_id: chatId,
+        text: 'Вы заблокированы и не можете отправлять сигналы через этого бота.',
+        reply_markup: { remove_keyboard: true }
+      });
+      return res.status(200).json({ ok: true });
+    }
 
     if (text === '/start') {
       await clearState(chatId);
