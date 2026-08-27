@@ -104,6 +104,8 @@
   .sev-tag.high{background:var(--coral-deep);}
   .status-tag{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--line);color:var(--ink-soft);}
   .feed-desc{margin-top:8px;font-size:14px;color:var(--ink-soft);}
+  .feed-phone{margin-top:4px;font-size:13px;color:var(--ink-soft);}
+  .feed-photo{max-width:220px;max-height:220px;border-radius:14px;margin-top:10px;display:block;object-fit:cover;}
   .feed-bottom{margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
   .feed-time{font-size:11.5px;color:var(--ink-soft);}
   .feed-actions{display:flex;gap:8px;}
@@ -272,6 +274,8 @@ function renderFeed(){
         </div>
       </div>
       ${r.desc ? `<div class="feed-desc">${escapeHtml(r.desc)}</div>` : ''}
+      ${r.phone ? `<div class="feed-phone">📞 ${escapeHtml(r.phone)}</div>` : ''}
+      ${r.photo ? `<img class="feed-photo" src="/api/telegram-photo?file_id=${encodeURIComponent(r.photo)}" alt="Фото сигнала" loading="lazy">` : ''}
       <div class="feed-bottom">
         <span class="feed-time">${timeAgo(r.ts)}</span>
         <div class="feed-actions">

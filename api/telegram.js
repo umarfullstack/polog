@@ -10,10 +10,33 @@ const STATE_KEY = 'polog:tgstate';
 
 const REPORT_BTN = '🚨 Сообщить о загрязнении';
 const CANCEL_BTN = '✖️ Отмена';
+const SKIP_BTN = '⏭ Пропустить';
+const LOCATION_BTN = '📍 Отправить геолокацию';
+const CONTACT_BTN = '📞 Отправить номер телефона';
 
 const mainKeyboard = { keyboard: [[{ text: REPORT_BTN }]], resize_keyboard: true };
-const cancelKeyboard = { keyboard: [[{ text: CANCEL_BTN }]], resize_keyboard: true };
-const descKeyboard = { keyboard: [[{ text: '/skip' }], [{ text: CANCEL_BTN }]], resize_keyboard: true };
+const locKeyboard = {
+  keyboard: [
+    [{ text: LOCATION_BTN, request_location: true }],
+    [{ text: CANCEL_BTN }]
+  ],
+  resize_keyboard: true
+};
+const descKeyboard = {
+  keyboard: [
+    [{ text: SKIP_BTN }],
+    [{ text: CANCEL_BTN }]
+  ],
+  resize_keyboard: true
+};
+const phoneKeyboard = {
+  keyboard: [
+    [{ text: CONTACT_BTN, request_contact: true }],
+    [{ text: SKIP_BTN }],
+    [{ text: CANCEL_BTN }]
+  ],
+  resize_keyboard: true
+};
 const sevKeyboard = {
   inline_keyboard: [[
     { text: 'Низкая', callback_data: 'sev_low' },
@@ -22,6 +45,7 @@ const sevKeyboard = {
   ]]
 };
 const sevLabel = { low: 'Низкая', med: 'Средняя', high: 'Высокая' };
+const isSkip = (t) => t === SKIP_BTN || t === '/skip';
 
 async function redis(args) {
   const res = await fetch(REDIS_URL, {
@@ -58,8 +82,8 @@ async function startFlow(chatId) {
   await setState(chatId, { step: 'loc' });
   await tg('sendMessage', {
     chat_id: chatId,
-    text: 'Где вы это видите? Опишите место (например: «Парк Победы, ~400м от главного входа») или отправьте геолокацию 📍.',
-    reply_markup: cancelKeyboard
+    text: 'Где вы это видите? Нажмите кнопку, чтобы отправить геолокацию, или опишите место текстом (например: «Парк Победы, ~400м от главного входа»).',
+    reply_markup: locKeyboard
   });
 }
 
@@ -93,7 +117,16 @@ module.exports = async function handler(req, res) {
         }
         const sev = data.slice(4);
         const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        const report = { loc: state.loc, desc: state.desc || '', sev, ts: Date.now(), status: 'new', source: 'telegram' };
+        const report = {
+          loc: state.loc,
+          desc: state.desc || '',
+          phone: state.phone || '',
+          photo: state.photo || null,
+          sev,
+          ts: Date.now(),
+          status: 'new',
+          source: 'telegram'
+        };
         await redis(['HSET', REPORTS_KEY, key, JSON.stringify(report)]);
         await clearState(chatId);
         await tg('editMessageText', {
@@ -153,7 +186,7 @@ module.exports = async function handler(req, res) {
         loc = `${msg.location.latitude.toFixed(5)}, ${msg.location.longitude.toFixed(5)}`;
       }
       if (!loc) {
-        await tg('sendMessage', { chat_id: chatId, text: 'Пожалуйста, опишите текстом, где это находится, или отправьте геолокацию 📍.' });
+        await tg('sendMessage', { chat_id: chatId, text: 'Нажмите кнопку «Отправить геолокацию» или опишите место текстом.' });
         return res.status(200).json({ ok: true });
       }
       state.loc = loc;
@@ -161,14 +194,45 @@ module.exports = async function handler(req, res) {
       await setState(chatId, state);
       await tg('sendMessage', {
         chat_id: chatId,
-        text: 'Что вы видите? Опишите ситуацию (мусор, запах и т.д.) — или отправьте /skip.',
+        text: 'Что вы видите? Опишите текстом и/или пришлите фото места — или нажмите «Пропустить».',
         reply_markup: descKeyboard
       });
       return res.status(200).json({ ok: true });
     }
 
     if (state.step === 'desc') {
-      state.desc = text === '/skip' ? '' : text;
+      if (msg.photo && msg.photo.length) {
+        state.photo = msg.photo[msg.photo.length - 1].file_id;
+        state.desc = (msg.caption || '').trim();
+      } else if (isSkip(text)) {
+        state.desc = '';
+      } else if (text) {
+        state.desc = text;
+      } else {
+        await tg('sendMessage', { chat_id: chatId, text: 'Отправьте текст, фото или нажмите «Пропустить».' });
+        return res.status(200).json({ ok: true });
+      }
+      state.step = 'phone';
+      await setState(chatId, state);
+      await tg('sendMessage', {
+        chat_id: chatId,
+        text: 'Оставите номер телефона на случай, если понадобятся уточнения по сигналу? Это необязательно.',
+        reply_markup: phoneKeyboard
+      });
+      return res.status(200).json({ ok: true });
+    }
+
+    if (state.step === 'phone') {
+      if (msg.contact && msg.contact.phone_number) {
+        state.phone = msg.contact.phone_number;
+      } else if (isSkip(text)) {
+        state.phone = '';
+      } else if (text) {
+        state.phone = text;
+      } else {
+        await tg('sendMessage', { chat_id: chatId, text: 'Отправьте номер кнопкой, текстом, или нажмите «Пропустить».' });
+        return res.status(200).json({ ok: true });
+      }
       state.step = 'sev';
       await setState(chatId, state);
       await tg('sendMessage', { chat_id: chatId, text: 'Принято.', reply_markup: { remove_keyboard: true } });
