@@ -121,6 +121,26 @@
 
   .empty-state{font-size:13.5px;color:var(--ink-soft);padding:24px 0;text-align:center;}
 
+  /* ---------- AUTH GATE ---------- */
+  .auth-gate{position:fixed;inset:0;background:var(--emerald-deep);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;}
+  .auth-gate.hidden{display:none;}
+  .auth-card{background:var(--bg);border-radius:28px;padding:36px 32px;max-width:360px;width:100%;box-shadow:0 30px 60px rgba(0,0,0,0.35);}
+  .auth-card h2{font-size:21px;font-weight:500;margin-bottom:8px;}
+  .auth-card p{font-size:13.5px;color:var(--ink-soft);margin:0 0 20px;}
+  .auth-card input{
+    width:100%;padding:13px 16px;border:1.5px solid var(--line);border-radius:14px;
+    font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;background:#fff;color:var(--ink);margin-bottom:12px;
+  }
+  .auth-card input:focus{outline:none;border-color:var(--emerald);}
+  .auth-card button{
+    width:100%;padding:13px;border:none;border-radius:99px;background:var(--emerald-deep);color:#fff;
+    font-weight:700;font-size:14.5px;
+  }
+  .auth-card button:hover{background:var(--emerald);}
+  .auth-err{font-size:13px;color:var(--coral-deep);margin-top:10px;min-height:16px;font-weight:600;}
+  .feed-loc a{color:inherit;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px;}
+  .feed-loc a:hover{text-decoration-color:var(--emerald);}
+
   footer{padding:20px 0 60px;}
   .footer-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;border-top:1px solid var(--line);padding-top:24px;font-size:13px;color:var(--ink-soft);}
   .reset-btn{background:none;border:none;color:var(--coral-deep);cursor:pointer;font-size:13px;font-weight:600;}
@@ -129,6 +149,18 @@
 </style>
 </head>
 <body>
+
+<div class="auth-gate" id="authGate">
+  <div class="auth-card">
+    <h2>Панель администратора</h2>
+    <p>Введите код доступа, чтобы увидеть сигналы.</p>
+    <form id="authForm">
+      <input type="password" id="authInput" placeholder="Код администратора" autocomplete="off" autofocus>
+      <button type="submit">Войти</button>
+      <div class="auth-err" id="authErr"></div>
+    </form>
+  </div>
+</div>
 
 <nav>
   <div class="wrap">
@@ -192,9 +224,50 @@ const sevLabel = { low: 'Низкая', med: 'Средняя', high: 'Высок
 let allReports = [];
 let bannedIds = new Set();
 let currentFilter = 'all';
+let adminToken = localStorage.getItem('polog_admin_token') || '';
 
 const hotspotList = document.getElementById('hotspotList');
 const feedList = document.getElementById('feedList');
+const authGate = document.getElementById('authGate');
+const authForm = document.getElementById('authForm');
+const authInput = document.getElementById('authInput');
+const authErr = document.getElementById('authErr');
+
+function showGate(message){
+  authErr.textContent = message || '';
+  authGate.classList.remove('hidden');
+  authInput.focus();
+}
+function hideGate(){
+  authGate.classList.add('hidden');
+}
+
+async function adminFetch(url, options){
+  const opts = options || {};
+  opts.headers = Object.assign({}, opts.headers, { 'X-Admin-Token': adminToken });
+  const res = await fetch(url, opts);
+  if(res.status === 401){
+    adminToken = '';
+    localStorage.removeItem('polog_admin_token');
+    showGate('Неверный код доступа.');
+    throw new Error('unauthorized');
+  }
+  return res;
+}
+
+function photoUrl(fileId){
+  return `/api/telegram-photo?file_id=${encodeURIComponent(fileId)}&token=${encodeURIComponent(adminToken)}`;
+}
+
+authForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const val = authInput.value.trim();
+  if(!val) return;
+  adminToken = val;
+  localStorage.setItem('polog_admin_token', val);
+  hideGate();
+  loadReports();
+});
 
 function timeAgo(ts){
   const diff = Math.max(0, Date.now() - ts);
@@ -213,22 +286,26 @@ function escapeHtml(str){
 }
 
 async function loadReports(){
+  if(!adminToken){ showGate(); return; }
   hotspotList.innerHTML = '<div class="empty-state">Загрузка…</div>';
   feedList.innerHTML = '<div class="empty-state">Загрузка…</div>';
   try{
     const [reportsRes, bannedRes] = await Promise.all([
-      fetch('/api/reports'),
-      fetch('/api/telegram-ban')
+      adminFetch('/api/reports'),
+      adminFetch('/api/telegram-ban')
     ]);
     if(!reportsRes.ok) throw new Error('Ошибка сети');
     allReports = await reportsRes.json();
     bannedIds = new Set(bannedRes.ok ? await bannedRes.json() : []);
+    hideGate();
     renderStats();
     renderHotspots();
     renderFeed();
   }catch(e){
-    hotspotList.innerHTML = '<div class="empty-state">Не удалось загрузить данные.</div>';
-    feedList.innerHTML = '<div class="empty-state">Не удалось загрузить данные.</div>';
+    if(e.message !== 'unauthorized'){
+      hotspotList.innerHTML = '<div class="empty-state">Не удалось загрузить данные.</div>';
+      feedList.innerHTML = '<div class="empty-state">Не удалось загрузить данные.</div>';
+    }
   }
 }
 
@@ -281,10 +358,14 @@ function renderFeed(){
   feedList.innerHTML = list.map(r => {
     const banned = r.tgUserId != null && bannedIds.has(String(r.tgUserId));
     const senderName = [r.tgName, r.tgUsername].filter(Boolean).join(' ');
+    const locHtml = r.mapUrl
+      ? `<a href="${escapeHtml(r.mapUrl)}" target="_blank" rel="noopener">${escapeHtml(r.loc)} ↗</a>`
+      : escapeHtml(r.loc);
+    const photoSrc = r.photo ? photoUrl(r.photo) : (r.photoData || null);
     return `
     <div class="feed-item ${r.status === 'resolved' ? 'resolved' : ''}">
       <div class="feed-top">
-        <div class="feed-loc">${escapeHtml(r.loc)}</div>
+        <div class="feed-loc">${locHtml}</div>
         <div class="feed-tags">
           <span class="sev-tag ${r.sev}">${sevLabel[r.sev] || r.sev}</span>
           ${r.source === 'telegram' ? '<span class="status-tag">Telegram</span>' : ''}
@@ -295,7 +376,7 @@ function renderFeed(){
       ${r.desc ? `<div class="feed-desc">${escapeHtml(r.desc)}</div>` : ''}
       ${senderName ? `<div class="feed-sender">👤 ${escapeHtml(senderName)}</div>` : ''}
       ${r.phone ? `<div class="feed-phone">📞 ${escapeHtml(r.phone)}</div>` : ''}
-      ${r.photo ? `<img class="feed-photo" src="/api/telegram-photo?file_id=${encodeURIComponent(r.photo)}" alt="Фото сигнала" loading="lazy">` : ''}
+      ${photoSrc ? `<img class="feed-photo" src="${photoSrc}" alt="Фото сигнала" loading="lazy">` : ''}
       <div class="feed-bottom">
         <span class="feed-time">${timeAgo(r.ts)}</span>
         <div class="feed-actions">
@@ -340,10 +421,10 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape') closeLightbox
 async function handleAction(action, key, tgUserId){
   try{
     if(action === 'delete'){
-      const res = await fetch(`/api/reports?key=${encodeURIComponent(key)}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/reports?key=${encodeURIComponent(key)}`, { method: 'DELETE' });
       if(!res.ok) throw new Error('Ошибка сети');
     } else if(action === 'resolve' || action === 'reopen'){
-      const res = await fetch(`/api/reports?key=${encodeURIComponent(key)}`, {
+      const res = await adminFetch(`/api/reports?key=${encodeURIComponent(key)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: action === 'resolve' ? 'resolved' : 'new' })
@@ -351,19 +432,19 @@ async function handleAction(action, key, tgUserId){
       if(!res.ok) throw new Error('Ошибка сети');
     } else if(action === 'ban'){
       if(!confirm('Забанить этого пользователя в Telegram-боте? Он больше не сможет отправлять сигналы.')) return;
-      const res = await fetch('/api/telegram-ban', {
+      const res = await adminFetch('/api/telegram-ban', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tgUserId })
       });
       if(!res.ok) throw new Error('Ошибка сети');
     } else if(action === 'unban'){
-      const res = await fetch(`/api/telegram-ban?tgUserId=${encodeURIComponent(tgUserId)}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/telegram-ban?tgUserId=${encodeURIComponent(tgUserId)}`, { method: 'DELETE' });
       if(!res.ok) throw new Error('Ошибка сети');
     }
     await loadReports();
   }catch(e){
-    alert('Не удалось выполнить действие. Попробуйте ещё раз.');
+    if(e.message !== 'unauthorized') alert('Не удалось выполнить действие. Попробуйте ещё раз.');
   }
 }
 
@@ -382,15 +463,19 @@ document.getElementById('refreshBtn2').addEventListener('click', loadReports);
 document.getElementById('resetBtn').addEventListener('click', async () => {
   if(!confirm('Удалить все сигналы из общего списка? Это затронет данные всех посетителей.')) return;
   try{
-    const res = await fetch('/api/reports?all=true', { method: 'DELETE' });
+    const res = await adminFetch('/api/reports?all=true', { method: 'DELETE' });
     if(!res.ok) throw new Error('Ошибка сети');
     await loadReports();
   }catch(e){
-    alert('Не удалось очистить список.');
+    if(e.message !== 'unauthorized') alert('Не удалось очистить список.');
   }
 });
 
-loadReports();
+if(adminToken){
+  loadReports();
+}else{
+  showGate();
+}
 </script>
 
 </body>

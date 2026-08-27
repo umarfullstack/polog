@@ -1,8 +1,14 @@
 // Отдаёт фото, присланное в Telegram-бота, по file_id — используется в админке.
 // Бот-токен нужен только на сервере, поэтому клиент ходит через этот прокси, а не напрямую в Telegram.
+// <img> не может слать заголовки, поэтому код администратора передаётся query-параметром ?token=.
+const { checkAdmin } = require('./_auth');
+
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 module.exports = async function handler(req, res) {
+  if (!checkAdmin(req)) {
+    return res.status(401).end();
+  }
   const fileId = req.query.file_id;
   if (!fileId) {
     return res.status(400).end();

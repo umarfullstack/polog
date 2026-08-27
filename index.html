@@ -148,13 +148,26 @@
   @media(max-width:640px){.form-card{padding:28px 22px;}}
   label{display:block;font-size:13px;font-weight:600;color:var(--emerald-deep);margin:20px 0 8px;}
   label:first-of-type{margin-top:0;}
-  input[type=text],textarea{
+  input[type=text],input[type=tel],textarea{
     width:100%;padding:13px 16px;border:1.5px solid var(--line);border-radius:16px;
     font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;background:#fff;color:var(--ink);
     transition:border-color .2s ease;
   }
   textarea{resize:vertical;min-height:90px;}
   input:focus,textarea:focus{outline:none;border-color:var(--emerald);}
+  .sev-hint{font-size:12px;color:var(--ink-soft);margin:-2px 0 8px;}
+  .photo-pick-btn{
+    display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:99px;border:1.5px solid var(--line);
+    background:#fff;color:var(--ink);font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;transition:border-color .2s ease;
+  }
+  .photo-pick-btn:hover{border-color:var(--emerald);}
+  .photo-preview-wrap{display:none;position:relative;margin-top:12px;width:96px;}
+  .photo-preview-wrap.show{display:block;}
+  .photo-preview-wrap img{width:96px;height:96px;object-fit:cover;border-radius:14px;border:1px solid var(--line);display:block;}
+  .photo-remove-btn{
+    position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;border:none;
+    background:var(--coral-deep);color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  }
   .sev-options{display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;}
   .sev-opt{flex:1;min-width:100px;}
   .sev-opt input{position:absolute;opacity:0;pointer-events:none;}
@@ -306,7 +319,7 @@
       <div class="form-side reveal">
         <h2 id="form-side-title">Ваш сигнал <em id="form-side-em">меняет</em> порядок приоритетов</h2>
         <p id="form-side-desc">Чем больше людей сообщают об одном месте — тем выше оно поднимается в списке для тех, кто принимает решения.</p>
-        <div class="trust-note" id="trust-note">Сообщения общие и видны в панели. Не указывайте личные данные — только факты.</div>
+        <div class="trust-note" id="trust-note">Сообщения общие и видны в панели. Телефон и фото — необязательны, их видят только администраторы.</div>
       </div>
       <div class="form-card reveal">
         <label for="loc" id="lbl-loc">Локация</label>
@@ -315,7 +328,19 @@
         <label for="desc" id="lbl-desc">Что вы видите</label>
         <textarea id="desc" placeholder="Скопление отходов, неприятный запах..."></textarea>
 
+        <label for="phone" id="lbl-phone">Телефон (необязательно)</label>
+        <input type="tel" id="phone" placeholder="+998 90 123 45 67">
+
+        <label id="lbl-photo">Фото (необязательно)</label>
+        <input type="file" id="photo" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;">
+        <button type="button" class="photo-pick-btn" id="photoPickBtn">📷 <span id="photoPickLabel">Прикрепить фото</span></button>
+        <div class="photo-preview-wrap" id="photoPreviewWrap">
+          <img id="photoPreview" alt="Превью фото">
+          <button type="button" class="photo-remove-btn" id="photoRemoveBtn" aria-label="Удалить фото">✕</button>
+        </div>
+
         <label id="lbl-sev">Серьёзность</label>
+        <div class="sev-hint" id="sev-hint">Низкая — немного мусора · Средняя — заметное загрязнение · Высокая — токсично или опасно</div>
         <div class="sev-options">
           <div class="sev-opt low"><input type="radio" name="sev" id="sev-low" value="low"><label for="sev-low" id="lbl-sev-low">Низкая</label></div>
           <div class="sev-opt med"><input type="radio" name="sev" id="sev-med" value="med" checked><label for="sev-med" id="lbl-sev-med">Средняя</label></div>
@@ -369,12 +394,17 @@ const dict = {
     formSideEm: "меняет",
     formSideTitleEnd: " порядок приоритетов",
     formSideDesc: "Чем больше людей сообщают об одном месте — тем выше оно поднимается в списке для тех, кто принимает решения.",
-    trustNote: "Сообщения общие и видны в панели. Не указывайте личные данные — только факты.",
+    trustNote: "Сообщения общие и видны в панели. Телефон и фото — необязательны, их видят только администраторы.",
     lblLoc: "Локация",
     phLoc: "напр. Парк, ~400м от главного входа",
     lblDesc: "Что вы видите",
     phDesc: "Скопление отходов, неприятный запах...",
+    lblPhone: "Телефон (необязательно)",
+    phPhone: "+998 90 123 45 67",
+    lblPhoto: "Фото (необязательно)",
+    photoPickLabel: "Прикрепить фото",
     lblSev: "Серьёзность",
+    sevHint: "Низкая — немного мусора · Средняя — заметное загрязнение · Высокая — токсично или опасно",
     sevLow: "Низкая",
     sevMed: "Средняя",
     sevHigh: "Высокая",
@@ -415,12 +445,17 @@ const dict = {
     formSideEm: "changes",
     formSideTitleEnd: " priority orders",
     formSideDesc: "The more reports a location receives, the higher it moves up for decision makers.",
-    trustNote: "Reports are public to responders. Avoid personal data—stick to facts.",
+    trustNote: "Reports are shared with responders. Phone and photo are optional and only visible to admins.",
     lblLoc: "Location",
     phLoc: "e.g., Central Park, ~400m from main gate",
     lblDesc: "What do you see?",
     phDesc: "Waste accumulation, bad odor...",
+    lblPhone: "Phone (optional)",
+    phPhone: "+1 555 123 4567",
+    lblPhoto: "Photo (optional)",
+    photoPickLabel: "Attach a photo",
     lblSev: "Severity",
+    sevHint: "Low — a bit of litter · Medium — noticeable pollution · High — toxic or hazardous",
     sevLow: "Low",
     sevMed: "Medium",
     sevHigh: "High",
@@ -461,12 +496,17 @@ const dict = {
     formSideEm: "o'zgartiradi",
     formSideTitleEnd: " tartibni",
     formSideDesc: "Bir joy haqida qancha ko'p xabar berilsa, u qaror qabul qiluvchilar uchun shuncha yuqoriga chiqadi.",
-    trustNote: "Xabarlar ochiq holda ko'rinadi. Shaxsiy ma'lumotlarni kiritmang.",
+    trustNote: "Xabarlar mas'ul xizmatlar uchun ochiq. Telefon va rasm ixtiyoriy — faqat administratorlarga ko'rinadi.",
     lblLoc: "Joylashuv (Lokatsiya)",
     phLoc: "masalan: Bo'stonliq tuman, soy bo'yi",
     lblDesc: "Nimani ko'ryapsiz",
     phDesc: "Chiqindi to'planishi, noxush hid...",
+    lblPhone: "Telefon (ixtiyoriy)",
+    phPhone: "+998 90 123 45 67",
+    lblPhoto: "Rasm (ixtiyoriy)",
+    photoPickLabel: "Rasm biriktirish",
     lblSev: "Jiddiyligi",
+    sevHint: "Past — biroz chiqindi · O'rta — sezilarli ifloslanish · Yuqori — zaharli yoki xavfli",
     sevLow: "Past",
     sevMed: "O'rta",
     sevHigh: "Yuqori",
@@ -525,7 +565,12 @@ function setLanguage(lang) {
   document.getElementById('loc').placeholder = t.phLoc;
   document.getElementById('lbl-desc').textContent = t.lblDesc;
   document.getElementById('desc').placeholder = t.phDesc;
+  document.getElementById('lbl-phone').textContent = t.lblPhone;
+  document.getElementById('phone').placeholder = t.phPhone;
+  document.getElementById('lbl-photo').textContent = t.lblPhoto;
+  document.getElementById('photoPickLabel').textContent = t.photoPickLabel;
   document.getElementById('lbl-sev').textContent = t.lblSev;
+  document.getElementById('sev-hint').textContent = t.sevHint;
 
   document.getElementById('lbl-sev-low').textContent = t.sevLow;
   document.getElementById('lbl-sev-med').textContent = t.sevMed;
@@ -540,15 +585,54 @@ function setLanguage(lang) {
 // Форма
 const locInput = document.getElementById('loc');
 const descInput = document.getElementById('desc');
+const phoneInput = document.getElementById('phone');
+const photoInput = document.getElementById('photo');
+const photoPickBtn = document.getElementById('photoPickBtn');
+const photoPreviewWrap = document.getElementById('photoPreviewWrap');
+const photoPreview = document.getElementById('photoPreview');
+const photoRemoveBtn = document.getElementById('photoRemoveBtn');
 const submitBtn = document.getElementById('submitBtn');
 const formMsg = document.getElementById('formMsg');
 const justSubmitted = document.getElementById('justSubmitted');
 const sessionReports = [];
+let photoDataUrl = null;
+
+photoPickBtn.addEventListener('click', () => photoInput.click());
+
+photoInput.addEventListener('change', () => {
+  const file = photoInput.files && photoInput.files[0];
+  if(!file) return;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    img.onload = () => {
+      const maxDim = 1024;
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      photoDataUrl = canvas.toDataURL('image/jpeg', 0.72);
+      photoPreview.src = photoDataUrl;
+      photoPreviewWrap.classList.add('show');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+photoRemoveBtn.addEventListener('click', () => {
+  photoDataUrl = null;
+  photoInput.value = '';
+  photoPreviewWrap.classList.remove('show');
+});
 
 submitBtn.addEventListener('click', async () => {
   const t = dict[currentLang];
   const loc = locInput.value.trim();
   const desc = descInput.value.trim();
+  const phone = phoneInput.value.trim();
   const sev = document.querySelector('input[name=sev]:checked').value;
   formMsg.classList.remove('err');
 
@@ -565,7 +649,7 @@ submitBtn.addEventListener('click', async () => {
     const response = await fetch('/api/reports', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ loc, desc, sev })
+      body: JSON.stringify({ loc, desc, sev, phone, photoData: photoDataUrl })
     });
 
     if (response.ok) {
@@ -575,12 +659,16 @@ submitBtn.addEventListener('click', async () => {
       renderSessionReports();
       locInput.value = '';
       descInput.value = '';
+      phoneInput.value = '';
+      photoDataUrl = null;
+      photoInput.value = '';
+      photoPreviewWrap.classList.remove('show');
       document.getElementById('sev-med').checked = true;
     } else {
       throw new Error('Ошибка сети');
     }
   } catch(e) {
-    formMsg.textContent = t.msgFail;2
+    formMsg.textContent = t.msgFail;
     formMsg.classList.add('err');
   } finally {
     submitBtn.disabled = false;

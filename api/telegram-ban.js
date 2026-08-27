@@ -1,5 +1,7 @@
 // Список забаненных Telegram-пользователей (общий с ботом через тот же Redis).
 // Забаненный больше не может отправлять сигналы через api/telegram.js.
+const { checkAdmin } = require('./_auth');
+
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -32,13 +34,16 @@ async function notify(chatId, text) {
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Token');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
   if (!REDIS_URL || !REDIS_TOKEN) {
     return res.status(500).json({ error: 'Хранилище не подключено.' });
+  }
+  if (!checkAdmin(req)) {
+    return res.status(401).json({ error: 'Требуется код администратора.' });
   }
 
   try {

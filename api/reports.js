@@ -1,8 +1,17 @@
 // Общее хранилище сигналов на Upstash Redis (REST API), доступное с любого устройства.
 // Нужны переменные окружения на Vercel: подключите Storage -> Upstash for Redis (или Vercel KV) к проекту.
+const crypto = require('crypto');
+const { checkAdmin } = require('./_auth');
+
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const HASH_KEY = 'polog:reports';
+const RATE_PREFIX = 'polog:rl:';
+const DEDUP_PREFIX = 'polog:dedup:';
+const RATE_LIMIT_MAX = 8;
+const RATE_LIMIT_WINDOW = 3600;
+const DEDUP_WINDOW = 300;
+const MAX_PHOTO_BYTES = 900000; // ~900KB base64, keeps a single Redis value reasonable
 
 async function redis(args) {
   const res = await fetch(REDIS_URL, {
@@ -34,10 +43,16 @@ function parseHGetAll(flat) {
   return reports;
 }
 
+function getIp(req) {
+  const fwd = req.headers['x-forwarded-for'];
+  if (fwd) return fwd.split(',')[0].trim();
+  return (req.socket && req.socket.remoteAddress) || 'unknown';
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Token');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -47,14 +62,50 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: 'Хранилище не подключено. Добавьте Upstash/KV в настройках проекта Vercel.' });
   }
 
+  if (req.method === 'GET' || req.method === 'PATCH' || req.method === 'DELETE') {
+    if (!checkAdmin(req)) {
+      return res.status(401).json({ error: 'Требуется код администратора.' });
+    }
+  }
+
   try {
     if (req.method === 'POST') {
-      const { loc, desc, sev } = req.body || {};
+      const { loc, desc, sev, phone, photoData } = req.body || {};
       if (!loc) {
         return res.status(400).json({ error: 'Укажите локацию' });
       }
+      if (photoData && Buffer.byteLength(photoData, 'utf8') > MAX_PHOTO_BYTES) {
+        return res.status(413).json({ error: 'Фото слишком большое.' });
+      }
+
+      const ip = getIp(req);
+      const rlKey = RATE_PREFIX + ip;
+      const count = await redis(['INCR', rlKey]);
+      if (count === 1) {
+        await redis(['EXPIRE', rlKey, String(RATE_LIMIT_WINDOW)]);
+      }
+      if (count > RATE_LIMIT_MAX) {
+        return res.status(429).json({ error: 'Слишком много сигналов подряд. Попробуйте позже.' });
+      }
+
+      const dedupHash = crypto.createHash('md5').update(`${loc}|${desc || ''}|${sev || 'med'}`).digest('hex');
+      const dedupKey = DEDUP_PREFIX + dedupHash;
+      const setResult = await redis(['SET', dedupKey, '1', 'NX', 'EX', String(DEDUP_WINDOW)]);
+      if (setResult !== 'OK') {
+        return res.status(429).json({ error: 'Такой же сигнал уже отправлен только что.' });
+      }
+
       const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const report = { loc, desc: desc || '', sev: sev || 'med', ts: Date.now(), status: 'new' };
+      const report = {
+        loc,
+        desc: desc || '',
+        sev: sev || 'med',
+        phone: phone || '',
+        photoData: photoData || null,
+        ts: Date.now(),
+        status: 'new',
+        source: 'web'
+      };
       await redis(['HSET', HASH_KEY, key, JSON.stringify(report)]);
       report._key = key;
       return res.status(201).json({ success: true, report });
