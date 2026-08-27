@@ -267,6 +267,7 @@ function renderFeed(){
         <div class="feed-loc">${escapeHtml(r.loc)}</div>
         <div class="feed-tags">
           <span class="sev-tag ${r.sev}">${sevLabel[r.sev] || r.sev}</span>
+          ${r.source === 'telegram' ? '<span class="status-tag">Telegram</span>' : ''}
           ${r.status === 'resolved' ? '<span class="status-tag">Решено</span>' : ''}
         </div>
       </div>
