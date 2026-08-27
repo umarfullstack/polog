@@ -2,6 +2,7 @@
 // Забаненный больше не может отправлять сигналы через api/telegram.js.
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const BANNED_KEY = 'polog:tgbanned';
 
 async function redis(args) {
@@ -13,6 +14,19 @@ async function redis(args) {
   const data = await res.json();
   if (data.error) throw new Error(data.error);
   return data.result;
+}
+
+async function notify(chatId, text) {
+  if (!BOT_TOKEN) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, reply_markup: { remove_keyboard: true } })
+    });
+  } catch (e) {
+    // не блокируем бан/разбан, если уведомление не доставилось
+  }
 }
 
 module.exports = async function handler(req, res) {
@@ -39,6 +53,7 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'Укажите tgUserId' });
       }
       await redis(['SADD', BANNED_KEY, String(tgUserId)]);
+      await notify(tgUserId, 'Вы заблокированы и больше не можете отправлять сигналы через бота «Полог».');
       return res.status(200).json({ success: true });
     }
 
@@ -48,6 +63,7 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'Укажите tgUserId' });
       }
       await redis(['SREM', BANNED_KEY, String(tgUserId)]);
+      await notify(tgUserId, 'Блокировка снята — снова можно отправлять сигналы через бота «Полог».');
       return res.status(200).json({ success: true });
     }
 
