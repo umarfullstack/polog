@@ -92,6 +92,14 @@
   }
   .wave{display:block;width:100%;height:auto;margin-bottom:-2px;}
 
+  /* ---------- LIVE STATS ---------- */
+  .stats-live{padding:80px 0 8px;}
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:40px;}
+  @media(max-width:820px){.stats-grid{grid-template-columns:repeat(2,1fr);}}
+  .stats-card{background:#fff;border:1px solid var(--line);border-radius:24px;padding:26px 22px;box-shadow:0 16px 40px rgba(15,61,46,0.06);}
+  .stats-num{font-family:'Fraunces',serif;font-size:clamp(28px,3.4vw,38px);color:var(--emerald-deep);font-variant-numeric:tabular-nums;}
+  .stats-lbl{margin-top:6px;font-size:13px;color:var(--ink-soft);}
+
   /* ---------- BEFORE / AFTER ---------- */
   .before-after{padding:88px 0 96px;position:relative;}
   .section-title-ink{font-size:clamp(28px,3.4vw,40px);font-weight:500;color:var(--ink);}
@@ -312,6 +320,21 @@
   </div>
 </section>
 
+<section class="stats-live" id="stats-live">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow"><span class="pulse-dot"></span><span id="stats-eyebrow">Реальные цифры</span></div>
+      <h2 class="section-title-ink" id="stats-title">Уже происходит</h2>
+    </div>
+    <div class="stats-grid reveal">
+      <div class="stats-card"><div class="stats-num" id="live-total">—</div><div class="stats-lbl" id="live-total-lbl">сигналов отправлено</div></div>
+      <div class="stats-card"><div class="stats-num" id="live-resolved">—</div><div class="stats-lbl" id="live-resolved-lbl">решено</div></div>
+      <div class="stats-card"><div class="stats-num" id="live-visits">—</div><div class="stats-lbl" id="live-visits-lbl">визитов на сайт</div></div>
+      <div class="stats-card"><div class="stats-num" id="live-visitors">—</div><div class="stats-lbl" id="live-visitors-lbl">посетителей</div></div>
+    </div>
+  </div>
+</section>
+
 <section class="form-section" id="report">
   <div class="form-bg-photo" style="background-image:url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&auto=format&fit=crop&q=60')"></div>
   <div class="wrap">
@@ -384,6 +407,16 @@ if(visitorId){
   }).catch(() => {});
 }
 
+fetch('/api/public-stats')
+  .then(r => r.ok ? r.json() : Promise.reject())
+  .then(s => {
+    document.getElementById('live-total').textContent = s.totalSignals;
+    document.getElementById('live-resolved').textContent = s.resolvedSignals;
+    document.getElementById('live-visits').textContent = s.totalVisits;
+    document.getElementById('live-visitors').textContent = s.uniqueVisitors;
+  })
+  .catch(() => {});
+
 let currentLang = 'ru';
 
 const dict = {
@@ -404,6 +437,12 @@ const dict = {
     baTagAfter: "После",
     baCapBefore: "Никто не сообщил — мусор копится месяцами",
     baCapAfter: "Сигнал получен — служба отреагировала",
+    statsEyebrow: "Реальные цифры",
+    statsTitle: "Уже происходит",
+    liveTotalLbl: "сигналов отправлено",
+    liveResolvedLbl: "решено",
+    liveVisitsLbl: "визитов на сайт",
+    liveVisitorsLbl: "посетителей",
     howEyebrow: "Как это работает",
     howTitle: "Три шага от того, что вы увидели, до реакций служб",
     step1Title: "Опишите",
@@ -455,6 +494,12 @@ const dict = {
     baTagAfter: "After",
     baCapBefore: "Nobody reported it — waste piles up for months",
     baCapAfter: "Signal received — responders took action",
+    statsEyebrow: "Real numbers",
+    statsTitle: "Already happening",
+    liveTotalLbl: "signals sent",
+    liveResolvedLbl: "resolved",
+    liveVisitsLbl: "site visits",
+    liveVisitorsLbl: "visitors",
     howEyebrow: "How it works",
     howTitle: "Three steps from what you see to emergency action",
     step1Title: "Describe",
@@ -506,6 +551,12 @@ const dict = {
     baTagAfter: "Keyin",
     baCapBefore: "Hech kim xabar bermadi — chiqindi oylab to'planadi",
     baCapAfter: "Signal qabul qilindi — xizmat chora ko'rdi",
+    statsEyebrow: "Haqiqiy raqamlar",
+    statsTitle: "Allaqachon sodir bo'lmoqda",
+    liveTotalLbl: "signal yuborildi",
+    liveResolvedLbl: "hal qilindi",
+    liveVisitsLbl: "sayt tashrifi",
+    liveVisitorsLbl: "tashrifchilar",
     howEyebrow: "Bu qanday ishlaydi",
     howTitle: "Siz ko'rgan voqeadan xizmatlar munosabatigacha 3 qadam",
     step1Title: "Tavsiflang",
@@ -569,6 +620,13 @@ function setLanguage(lang) {
   document.getElementById('ba-tag-after').textContent = t.baTagAfter;
   document.getElementById('ba-cap-before').textContent = t.baCapBefore;
   document.getElementById('ba-cap-after').textContent = t.baCapAfter;
+
+  document.getElementById('stats-eyebrow').textContent = t.statsEyebrow;
+  document.getElementById('stats-title').textContent = t.statsTitle;
+  document.getElementById('live-total-lbl').textContent = t.liveTotalLbl;
+  document.getElementById('live-resolved-lbl').textContent = t.liveResolvedLbl;
+  document.getElementById('live-visits-lbl').textContent = t.liveVisitsLbl;
+  document.getElementById('live-visitors-lbl').textContent = t.liveVisitorsLbl;
 
   document.getElementById('how-eyebrow').textContent = t.howEyebrow;
   document.getElementById('how-title').textContent = t.howTitle;

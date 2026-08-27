@@ -4,6 +4,7 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+const { notifyHighSeverity } = require('./_notify');
 
 const REPORTS_KEY = 'polog:reports';
 const STATE_KEY = 'polog:tgstate';
@@ -219,6 +220,9 @@ module.exports = async function handler(req, res) {
           ...fromInfo(cq.from)
         };
         await redis(['HSET', REPORTS_KEY, key, JSON.stringify(report)]);
+        if (report.sev === 'high') {
+          await notifyHighSeverity(report);
+        }
         await clearState(chatId);
         await tg('editMessageText', {
           chat_id: chatId,

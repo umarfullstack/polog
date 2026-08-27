@@ -109,6 +109,7 @@
   .feed-phone{margin-top:4px;font-size:13px;color:var(--ink-soft);}
   .feed-sender{margin-top:4px;font-size:13px;color:var(--ink-soft);}
   .status-tag.banned{background:var(--coral-deep);color:#fff;}
+  .status-tag.progress{background:var(--emerald);color:#fff;}
   .feed-photo{max-width:220px;max-height:220px;border-radius:14px;margin-top:10px;display:block;object-fit:cover;cursor:zoom-in;transition:opacity .15s ease;}
   .feed-photo:hover{opacity:0.85;}
   .photo-lightbox{position:fixed;inset:0;background:rgba(11,42,32,0.9);display:none;align-items:center;justify-content:center;z-index:100;padding:32px;cursor:zoom-out;}
@@ -205,6 +206,7 @@
       <div class="filter-tabs">
         <button class="filter-tab active" data-filter="all">Все</button>
         <button class="filter-tab" data-filter="new">Активные</button>
+        <button class="filter-tab" data-filter="progress">В работе</button>
         <button class="filter-tab" data-filter="high">Высокая серьёзность</button>
         <button class="filter-tab" data-filter="resolved">Решённые</button>
       </div>
@@ -417,6 +419,7 @@ function renderHotspots(){
 function renderFeed(){
   let list = allReports;
   if(currentFilter === 'new') list = list.filter(r => r.status !== 'resolved');
+  if(currentFilter === 'progress') list = list.filter(r => r.status === 'in_progress');
   if(currentFilter === 'high') list = list.filter(r => r.sev === 'high' && r.status !== 'resolved');
   if(currentFilter === 'resolved') list = list.filter(r => r.status === 'resolved');
 
@@ -440,6 +443,7 @@ function renderFeed(){
           <span class="sev-tag ${r.sev}">${sevLabel[r.sev] || r.sev}</span>
           ${r.source === 'telegram' ? '<span class="status-tag">Telegram</span>' : ''}
           ${banned ? '<span class="status-tag banned">Забанен</span>' : ''}
+          ${r.status === 'in_progress' ? '<span class="status-tag progress">В работе</span>' : ''}
           ${r.status === 'resolved' ? '<span class="status-tag">Решено</span>' : ''}
         </div>
       </div>
@@ -452,7 +456,11 @@ function renderFeed(){
         <div class="feed-actions">
           ${r.status === 'resolved'
             ? `<button class="action-btn" data-action="reopen" data-key="${r._key}">Вернуть в активные</button>`
-            : `<button class="action-btn" data-action="resolve" data-key="${r._key}">Отметить решённым</button>`}
+            : r.status === 'in_progress'
+              ? `<button class="action-btn" data-action="resolve" data-key="${r._key}">Отметить решённым</button>
+                 <button class="action-btn" data-action="reopen" data-key="${r._key}">Вернуть в новые</button>`
+              : `<button class="action-btn" data-action="progress" data-key="${r._key}">Взять в работу</button>
+                 <button class="action-btn" data-action="resolve" data-key="${r._key}">Отметить решённым</button>`}
           ${r.tgUserId != null
             ? (banned
                 ? `<button class="action-btn" data-action="unban" data-tguser="${r.tgUserId}">Разбанить</button>`
@@ -493,11 +501,12 @@ async function handleAction(action, key, tgUserId){
     if(action === 'delete'){
       const res = await adminFetch(`/api/reports?key=${encodeURIComponent(key)}`, { method: 'DELETE' });
       if(!res.ok) throw new Error('Ошибка сети');
-    } else if(action === 'resolve' || action === 'reopen'){
+    } else if(action === 'resolve' || action === 'reopen' || action === 'progress'){
+      const statusMap = { resolve: 'resolved', reopen: 'new', progress: 'in_progress' };
       const res = await adminFetch(`/api/reports?key=${encodeURIComponent(key)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: action === 'resolve' ? 'resolved' : 'new' })
+        body: JSON.stringify({ status: statusMap[action] })
       });
       if(!res.ok) throw new Error('Ошибка сети');
     } else if(action === 'ban'){

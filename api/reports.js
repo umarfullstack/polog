@@ -2,6 +2,7 @@
 // Нужны переменные окружения на Vercel: подключите Storage -> Upstash for Redis (или Vercel KV) к проекту.
 const crypto = require('crypto');
 const { checkAdmin } = require('./_auth');
+const { notifyHighSeverity } = require('./_notify');
 
 const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -109,6 +110,9 @@ module.exports = async function handler(req, res) {
       };
       await redis(['HSET', HASH_KEY, key, JSON.stringify(report)]);
       report._key = key;
+      if (report.sev === 'high') {
+        await notifyHighSeverity(report);
+      }
       return res.status(201).json({ success: true, report });
     }
 
