@@ -51,6 +51,8 @@
 
   .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:32px;position:relative;}
   @media(max-width:800px){.stat-row{grid-template-columns:repeat(2,1fr);}}
+  .stat-row-audience{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:12px;position:relative;max-width:520px;}
+  .stat-row-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,248,237,0.5);margin-top:28px;position:relative;}
   .stat-glass{background:rgba(255,248,237,0.12);backdrop-filter:blur(8px);border:1px solid rgba(255,248,237,0.2);border-radius:22px;padding:18px 20px;}
   .stat-num{font-family:'Fraunces',serif;font-size:30px;}
   .stat-lbl{font-size:12.5px;color:rgba(255,248,237,0.65);margin-top:4px;}
@@ -180,6 +182,11 @@
       <div class="stat-glass"><div class="stat-num" id="statHotspots">—</div><div class="stat-lbl">активных точек</div></div>
       <div class="stat-glass"><div class="stat-num" id="statResolved">—</div><div class="stat-lbl">отмечено решённым</div></div>
     </div>
+    <div class="stat-row-label">Аудитория · реальные счётчики</div>
+    <div class="stat-row-audience">
+      <div class="stat-glass"><div class="stat-num" id="statVisitors">—</div><div class="stat-lbl">посетителей сайта</div></div>
+      <div class="stat-glass"><div class="stat-num" id="statSenders">—</div><div class="stat-lbl">отправили хотя бы один сигнал</div></div>
+    </div>
   </div>
 </header>
 
@@ -223,6 +230,7 @@ const sevLabel = { low: 'Низкая', med: 'Средняя', high: 'Высок
 
 let allReports = [];
 let bannedIds = new Set();
+let visitStats = { totalVisits: 0, uniqueVisitors: 0 };
 let currentFilter = 'all';
 let adminToken = localStorage.getItem('polog_admin_token') || '';
 
@@ -290,9 +298,10 @@ async function loadReports(){
   hotspotList.innerHTML = '<div class="empty-state">Загрузка…</div>';
   feedList.innerHTML = '<div class="empty-state">Загрузка…</div>';
   try{
-    const [reportsRes, bannedRes] = await Promise.all([
+    const [reportsRes, bannedRes, visitRes] = await Promise.all([
       adminFetch('/api/reports'),
-      adminFetch('/api/telegram-ban')
+      adminFetch('/api/telegram-ban'),
+      adminFetch('/api/visit')
     ]);
     if(!reportsRes.ok){
       let detail = '';
@@ -301,6 +310,7 @@ async function loadReports(){
     }
     allReports = await reportsRes.json();
     bannedIds = new Set(bannedRes.ok ? await bannedRes.json() : []);
+    visitStats = visitRes.ok ? await visitRes.json() : { totalVisits: 0, uniqueVisitors: 0 };
     hideGate();
     renderStats();
     renderHotspots();
@@ -313,25 +323,81 @@ async function loadReports(){
   }
 }
 
+// ---------- Нечёткая группировка похожих локаций ----------
+// Считаем сигналы про одно и то же место, даже если координаты чуть отличаются
+// или локация вбита текстом по-разному ("Парк Победы, вход" vs "парк победы").
+const NEARBY_METERS = 150;
+const TEXT_SIMILARITY_MIN = 0.5;
+
+function normalizeLocText(s){
+  return (s || '')
+    .toLowerCase()
+    .replace(/[«»"'.,~№]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function textSimilarity(a, b){
+  const ta = new Set(normalizeLocText(a).split(' ').filter(Boolean));
+  const tb = new Set(normalizeLocText(b).split(' ').filter(Boolean));
+  if(ta.size === 0 || tb.size === 0) return 0;
+  let inter = 0;
+  ta.forEach(t => { if(tb.has(t)) inter++; });
+  const union = ta.size + tb.size - inter;
+  return union === 0 ? 0 : inter / union;
+}
+
+function haversineMeters(lat1, lon1, lat2, lon2){
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function sameLocation(clusterRep, report){
+  if(clusterRep.lat != null && clusterRep.lon != null && report.lat != null && report.lon != null){
+    return haversineMeters(clusterRep.lat, clusterRep.lon, report.lat, report.lon) <= NEARBY_METERS;
+  }
+  return textSimilarity(clusterRep.loc, report.loc) >= TEXT_SIMILARITY_MIN;
+}
+
+function clusterReports(reports){
+  const clusters = [];
+  for(const r of reports){
+    const match = clusters.find(c => sameLocation(c, r));
+    if(match){
+      match.reports.push(r);
+      if((r.loc || '').length > (match.loc || '').length) match.loc = r.loc;
+      if(match.lat == null && r.lat != null){ match.lat = r.lat; match.lon = r.lon; }
+    } else {
+      clusters.push({ loc: r.loc, lat: r.lat ?? null, lon: r.lon ?? null, reports: [r] });
+    }
+  }
+  return clusters;
+}
+
 function renderStats(){
   const active = allReports.filter(r => r.status !== 'resolved');
   document.getElementById('statTotal').textContent = allReports.length;
   document.getElementById('statHigh').textContent = active.filter(r => r.sev === 'high').length;
   document.getElementById('statResolved').textContent = allReports.filter(r => r.status === 'resolved').length;
-  const groups = new Set(active.map(r => (r.loc||'').trim().toLowerCase()));
-  document.getElementById('statHotspots').textContent = groups.size;
+  document.getElementById('statHotspots').textContent = clusterReports(active).length;
+
+  document.getElementById('statVisitors').textContent = visitStats.uniqueVisitors;
+  const senders = new Set(allReports.map(r => r.tgUserId ?? r.visitorId).filter(Boolean));
+  document.getElementById('statSenders').textContent = senders.size;
 }
 
 function renderHotspots(){
   const active = allReports.filter(r => r.status !== 'resolved');
-  const groups = {};
-  for(const r of active){
-    const key = (r.loc || '').trim().toLowerCase();
-    if(!groups[key]) groups[key] = { loc: r.loc, count: 0, score: 0 };
-    groups[key].count += 1;
-    groups[key].score += 2 + (sevWeight[r.sev] || 1);
-  }
-  const ranked = Object.values(groups).sort((a,b) => b.score - a.score).slice(0, 8);
+  const clusters = clusterReports(active);
+  const ranked = clusters.map(c => ({
+    loc: c.loc,
+    count: c.reports.length,
+    score: c.reports.reduce((sum, r) => sum + 2 + (sevWeight[r.sev] || 1), 0)
+  })).sort((a, b) => b.score - a.score).slice(0, 8);
   if(ranked.length === 0){
     hotspotList.innerHTML = '<div class="empty-state">Нет активных сигналов.</div>';
     return;

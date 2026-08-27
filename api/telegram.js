@@ -210,6 +210,8 @@ module.exports = async function handler(req, res) {
           phone: state.phone || '',
           photo: state.photo || null,
           mapUrl: state.mapUrl || null,
+          lat: state.lat != null ? state.lat : null,
+          lon: state.lon != null ? state.lon : null,
           sev: state.sev,
           ts: Date.now(),
           status: 'new',
@@ -284,10 +286,14 @@ module.exports = async function handler(req, res) {
     if (state.step === 'loc') {
       let loc = text;
       let mapUrl = null;
+      let lat = null;
+      let lon = null;
       if (!loc && msg.location) {
         const { latitude, longitude } = msg.location;
         loc = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
         mapUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        lat = latitude;
+        lon = longitude;
       }
       if (!loc) {
         await tg('sendMessage', { chat_id: chatId, text: 'Нажмите кнопку «Отправить геолокацию» или опишите место текстом.' });
@@ -295,6 +301,8 @@ module.exports = async function handler(req, res) {
       }
       state.loc = loc;
       state.mapUrl = mapUrl;
+      state.lat = lat;
+      state.lon = lon;
       state.step = 'desc';
       await setState(chatId, state);
       await tg('sendMessage', {

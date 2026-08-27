@@ -70,7 +70,7 @@ module.exports = async function handler(req, res) {
 
   try {
     if (req.method === 'POST') {
-      const { loc, desc, sev, phone, photoData } = req.body || {};
+      const { loc, desc, sev, phone, photoData, visitorId } = req.body || {};
       if (!loc) {
         return res.status(400).json({ error: 'Укажите локацию' });
       }
@@ -102,6 +102,7 @@ module.exports = async function handler(req, res) {
         sev: sev || 'med',
         phone: phone || '',
         photoData: photoData || null,
+        visitorId: visitorId || null,
         ts: Date.now(),
         status: 'new',
         source: 'web'

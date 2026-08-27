@@ -362,6 +362,28 @@
 </footer>
 
 <script>
+// Анонимный ID посетителя — только чтобы честно посчитать реальных людей (визиты/отправителей), без каких-либо личных данных.
+function getVisitorId(){
+  try{
+    let id = localStorage.getItem('polog_visitor_id');
+    if(!id){
+      id = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+      localStorage.setItem('polog_visitor_id', id);
+    }
+    return id;
+  }catch(e){
+    return null;
+  }
+}
+const visitorId = getVisitorId();
+if(visitorId){
+  fetch('/api/visit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ visitorId })
+  }).catch(() => {});
+}
+
 let currentLang = 'ru';
 
 const dict = {
@@ -649,7 +671,7 @@ submitBtn.addEventListener('click', async () => {
     const response = await fetch('/api/reports', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ loc, desc, sev, phone, photoData: photoDataUrl })
+      body: JSON.stringify({ loc, desc, sev, phone, photoData: photoDataUrl, visitorId })
     });
 
     if (response.ok) {
