@@ -265,7 +265,7 @@ authForm.addEventListener('submit', (e) => {
   if(!val) return;
   adminToken = val;
   localStorage.setItem('polog_admin_token', val);
-  hideGate();
+  authErr.textContent = 'Проверяем…';
   loadReports();
 });
 
@@ -294,7 +294,11 @@ async function loadReports(){
       adminFetch('/api/reports'),
       adminFetch('/api/telegram-ban')
     ]);
-    if(!reportsRes.ok) throw new Error('Ошибка сети');
+    if(!reportsRes.ok){
+      let detail = '';
+      try{ detail = (await reportsRes.json()).error || ''; }catch(_){ }
+      throw new Error(`Ошибка сервера (${reportsRes.status})${detail ? ': ' + detail : ''}`);
+    }
     allReports = await reportsRes.json();
     bannedIds = new Set(bannedRes.ok ? await bannedRes.json() : []);
     hideGate();
@@ -302,10 +306,10 @@ async function loadReports(){
     renderHotspots();
     renderFeed();
   }catch(e){
-    if(e.message !== 'unauthorized'){
-      hotspotList.innerHTML = '<div class="empty-state">Не удалось загрузить данные.</div>';
-      feedList.innerHTML = '<div class="empty-state">Не удалось загрузить данные.</div>';
-    }
+    if(e.message === 'unauthorized') return;
+    showGate(e.message || 'Не удалось загрузить данные.');
+    hotspotList.innerHTML = '<div class="empty-state">Не удалось загрузить данные.</div>';
+    feedList.innerHTML = '<div class="empty-state">Не удалось загрузить данные.</div>';
   }
 }
 
