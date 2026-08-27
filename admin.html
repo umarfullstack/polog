@@ -107,7 +107,11 @@
   .feed-phone{margin-top:4px;font-size:13px;color:var(--ink-soft);}
   .feed-sender{margin-top:4px;font-size:13px;color:var(--ink-soft);}
   .status-tag.banned{background:var(--coral-deep);color:#fff;}
-  .feed-photo{max-width:220px;max-height:220px;border-radius:14px;margin-top:10px;display:block;object-fit:cover;}
+  .feed-photo{max-width:220px;max-height:220px;border-radius:14px;margin-top:10px;display:block;object-fit:cover;cursor:zoom-in;transition:opacity .15s ease;}
+  .feed-photo:hover{opacity:0.85;}
+  .photo-lightbox{position:fixed;inset:0;background:rgba(11,42,32,0.9);display:none;align-items:center;justify-content:center;z-index:100;padding:32px;cursor:zoom-out;}
+  .photo-lightbox.open{display:flex;}
+  .photo-lightbox img{max-width:100%;max-height:100%;border-radius:16px;box-shadow:0 30px 60px rgba(0,0,0,0.4);}
   .feed-bottom{margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
   .feed-time{font-size:11.5px;color:var(--ink-soft);}
   .feed-actions{display:flex;gap:8px;}
@@ -176,6 +180,10 @@
     <button class="reset-btn" id="resetBtn">Очистить все сигналы</button>
   </div>
 </footer>
+
+<div class="photo-lightbox" id="photoLightbox">
+  <img id="photoLightboxImg" src="" alt="Фото сигнала">
+</div>
 
 <script>
 const sevWeight = { low: 1, med: 3, high: 6 };
@@ -309,7 +317,25 @@ function renderFeed(){
   feedList.querySelectorAll('.action-btn').forEach(btn => {
     btn.addEventListener('click', () => handleAction(btn.dataset.action, btn.dataset.key, btn.dataset.tguser));
   });
+
+  feedList.querySelectorAll('.feed-photo').forEach(img => {
+    img.addEventListener('click', () => openLightbox(img.src));
+  });
 }
+
+const photoLightbox = document.getElementById('photoLightbox');
+const photoLightboxImg = document.getElementById('photoLightboxImg');
+
+function openLightbox(src){
+  photoLightboxImg.src = src;
+  photoLightbox.classList.add('open');
+}
+function closeLightbox(){
+  photoLightbox.classList.remove('open');
+  photoLightboxImg.src = '';
+}
+photoLightbox.addEventListener('click', closeLightbox);
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeLightbox(); });
 
 async function handleAction(action, key, tgUserId){
   try{
