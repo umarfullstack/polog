@@ -619,6 +619,11 @@ const justSubmitted = document.getElementById('justSubmitted');
 const sessionReports = [];
 let photoDataUrl = null;
 
+phoneInput.addEventListener('input', () => {
+  const cleaned = phoneInput.value.replace(/[^\d+\-\s()]/g, '');
+  if(cleaned !== phoneInput.value) phoneInput.value = cleaned;
+});
+
 photoPickBtn.addEventListener('click', () => photoInput.click());
 
 photoInput.addEventListener('change', () => {
