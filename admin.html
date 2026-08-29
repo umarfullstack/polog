@@ -147,6 +147,8 @@
 
   footer{padding:20px 0 60px;}
   .footer-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;border-top:1px solid var(--line);padding-top:24px;font-size:13px;color:var(--ink-soft);}
+  .footer-phone{color:var(--emerald);font-weight:600;text-decoration:none;white-space:nowrap;}
+  .footer-phone:hover{color:var(--emerald-deep);text-decoration:underline;}
   .reset-btn{background:none;border:none;color:var(--coral-deep);cursor:pointer;font-size:13px;font-weight:600;}
 
   @media(prefers-reduced-motion:reduce){ *{animation:none !important;transition:none !important;} }
@@ -219,7 +221,10 @@
 <footer>
   <div class="wrap footer-row">
     <span>Полог · Admin — данные общие для всех, кто открывает эту ссылку.</span>
-    <button class="reset-btn" id="resetBtn">Очистить все сигналы</button>
+    <div style="display:flex;align-items:center;gap:18px;">
+      <a href="tel:+998978856101" class="footer-phone">Подписка для районов: +998 97 885-61-01</a>
+      <button class="reset-btn" id="resetBtn">Очистить все сигналы</button>
+    </div>
   </div>
 </footer>
 

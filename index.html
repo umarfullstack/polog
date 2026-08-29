@@ -203,6 +203,8 @@
 
   footer{padding:44px 0 60px;}
   .footer-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;border-top:1px solid var(--line);padding-top:26px;font-size:13px;color:var(--ink-soft);}
+  .footer-phone{color:var(--emerald);font-weight:600;text-decoration:none;white-space:nowrap;}
+  .footer-phone:hover{color:var(--emerald-deep);text-decoration:underline;}
 
   @media(prefers-reduced-motion:reduce){
     *{animation:none !important;transition:none !important;}
@@ -359,6 +361,7 @@
 <footer>
   <div class="wrap footer-row">
     <span id="footer-text">Полог — сеть оповещений. Сообщения общие для всех посетителей.</span>
+    <a href="tel:+998978856101" class="footer-phone"><span id="footer-phone-lbl">Подписка для районов:</span> +998 97 885-61-01</a>
   </div>
 </footer>
 
@@ -433,6 +436,7 @@ const dict = {
     sevHigh: "Высокая",
     submitBtn: "Отправить сигнал",
     footerText: "Полог — сеть оповещений. Сообщения общие для всех посетителей.",
+    footerPhoneLbl: "Подписка для районов:",
     msgErrLoc: "Укажите локацию — без неё сигнал невозможно сгруппировать.",
     msgSending: "Отправка…",
     msgSuccess: "Спасибо. Сигнал добавлен в общий список.",
@@ -484,6 +488,7 @@ const dict = {
     sevHigh: "High",
     submitBtn: "Send signal",
     footerText: "Polog alert system. All submissions are shared publicly.",
+    footerPhoneLbl: "District subscriptions:",
     msgErrLoc: "Please provide a location to group this alert.",
     msgSending: "Sending…",
     msgSuccess: "Thank you. Signal added to the list.",
@@ -535,6 +540,7 @@ const dict = {
     sevHigh: "Yuqori",
     submitBtn: "Signal yuborish",
     footerText: "Polog — ogohlantirish tarmog'i. Xabarlar barcha uchun ochiq.",
+    footerPhoneLbl: "Tumanlar uchun obuna:",
     msgErrLoc: "Lokatsiyani kiriting — usiz signalni guruhlab bo'lmaydi.",
     msgSending: "Yuborilmoqda…",
     msgSuccess: "Rahmat. Signal umumiy ro'yxatga qo'shildi.",
@@ -601,6 +607,7 @@ function setLanguage(lang) {
 
   document.getElementById('submitBtn').textContent = t.submitBtn;
   document.getElementById('footer-text').textContent = t.footerText;
+  document.getElementById('footer-phone-lbl').textContent = t.footerPhoneLbl;
 
   renderSessionReports();
 }
